@@ -573,7 +573,18 @@ Tareas:
 - [in progress] 11.6 Ejecutar una comparativa local con el mismo fixture usado por `SF3D` y con al menos una imagen creativa real
 - [pending] 11.7 Importar outputs en `Blender`, registrar vertices/caras/texturas, y conservar artefactos revisables
 - [in progress] 11.8 Comparar visualmente `SF3D`, `Hunyuan3D-2mini-Turbo` y `Trellis2 GGUF` bajo el mismo criterio de producto; decision cualitativa actual favorece claramente Trellis
-- [in progress] 11.9 Cerrar decision `go/no-go`: mantener `Hunyuan3D` nativo, mover el producto 3D de vuelta a `ComfyUI` con `Trellis2 GGUF`, o conservar ambas rutas por perfil
+- [in progress] 11.9 Cerrar decision `go/no-go` con evidencia formal: el corte tecnico actual favorece `Trellis2 GGUF Q4 texturizado`, pendiente cierre visual/producto y regla de fallback
+- [pending] 11.10 Implementar instalacion automatizada progresiva de `Trellis2 GGUF` para runtimes `ComfyUI` aislados
+  - [pending] 11.10.1 Orquestar instalacion en `scripts/apps/install-trellis2-gguf.sh` reutilizando `comfyui-trellis2-gguf-prepare-layout.sh`
+  - [pending] 11.10.2 Integrar gate de verificacion automatica via `comfyui-trellis2-gguf-validation.sh`
+  - [pending] 11.10.3 Normalizar codigos de salida (`0`, `10-14`) y resumen de estado para consumo operativo
+  - [pending] 11.10.4 Documentar variables de entrada, prerequisitos, artefactos y troubleshooting
+- [pending] 11.11 Promocion controlada de motor 3D por defecto a `Trellis2 GGUF` con fallback `Hunyuan3D`
+  - [pending] 11.11.1 Gate de calidad minimo: fixture historico + imagen creativa real + import `Blender`
+  - [pending] 11.11.2 Gate operativo minimo: `status=pass_preflight` y ausencia de `blocked_*`
+  - [pending] 11.11.3 Activar `Trellis2` como default solo cuando ambos gates pasen
+  - [pending] 11.11.4 Fallback automatico a `Hunyuan3D` cuando el preflight falle o falten dependencias criticas
+  - [pending] 11.11.5 Definir rollback explicito para volver temporalmente a `Hunyuan3D` sin downtime de operacion
 
 Entregables por tarea:
 
@@ -581,7 +592,9 @@ Entregables por tarea:
 - [done] 11.2-11.3 `scripts/apps/comfyui-trellis2-gguf-validation.sh`
 - [done] 11.5 `docs/comfyui/trellis2-gguf-interface.md` con evidencia API de Q4 texturizado
 - [done] 11.4 evidencia local de modelos minimos en `~/ComfyUI-trellis2-lab/models/trellis2_gguf_minimum/`
-- [in progress] 11.6-11.9 `docs/comfyui/trellis2-gguf-validation-results.md` registra el `.glb` Trellis Q4 texturizado; falta importarlo en `Blender` y cerrar comparativa formal
+- [in progress] 11.6-11.9 `docs/comfyui/trellis2-gguf-validation-results.md` con comparativa visual formal, import `Blender` y decision de producto
+- [pending] 11.10 `scripts/apps/install-trellis2-gguf.sh` + `plans/trellis2-installation-script.md`
+- [pending] 11.11 actualizacion del contrato operativo 3D para default `Trellis2` + fallback `Hunyuan3D` en `docs/comfyui/trellis2-gguf-interface.md`
 
 ## Riesgos a controlar
 
