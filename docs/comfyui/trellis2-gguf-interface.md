@@ -1,14 +1,27 @@
 # Interfaz Operativa de Trellis2 GGUF en ComfyUI
 
-Este documento implementa las tareas `11.2`, `11.3` y `11.5` del `DevPlan`.
-Define la interfaz canonica para la linea experimental `UC-3D-02`
-`image -> Trellis2 GGUF Q4_K_M -> textured glb` dentro de un runtime
+Este documento implementa las tareas `11.2`, `11.3`, `11.5` y `11.12` del
+`DevPlan`. Define la interfaz canonica para la ruta 3D vigente del repo. El
+grafo base sigue siendo `UC-3D-02`
+`image -> Trellis2 GGUF Q4_K_M -> textured glb`, pero `UC-3D-01`, `UC-3D-03`
+y `UC-3D-04` lo reutilizan por staging o por activo dentro de un runtime
 `ComfyUI` aislado, sin contaminar el runtime principal.
 
 ## Principio
 
-La fase 11 no reemplaza por defecto la linea nativa `Hunyuan3D`.
-Primero debe demostrar mejora visual real en igualdad de fixture.
+La fase 11 fija `Trellis2 GGUF` como foco 3D activo del repo. Las comparativas
+con `SF3D` o `Hunyuan3D` quedan como evidencia historica, no como baseline
+vigente.
+
+La pieza de workflow versionada y publicada por `openclaw-workflows` es:
+
+```text
+ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json
+```
+
+Ese mismo baseline se publica bajo alias distintos para `UC-3D-*`, evitando
+duplicar familias de grafos para cada caso cuando el modelador 3D real es el
+mismo.
 
 La interfaz de producto para la operadora no debe exponer detalles de wheels
 ni de cuantizacion. Debe hablar en terminos de:
@@ -88,6 +101,13 @@ Salida canonica:
 - preview renderizado del `glb`
 - metrica minima: vertices/caras/tamano/tiempo
 
+## Mapa operativo `UC-3D-*`
+
+- `UC-3D-02` usa el grafo Trellis de forma directa sobre la imagen de entrada.
+- `UC-3D-01` prepara una imagen semilla y despues reutiliza el mismo grafo.
+- `UC-3D-03` reutiliza el mismo grafo por activo, shell o bloque base.
+- `UC-3D-04` reutiliza el mismo grafo por crop, activo o envolvente.
+
 ### 3) Capa de producto (mensaje para usuaria no tecnica)
 
 Mensajes de estado recomendados:
@@ -95,14 +115,18 @@ Mensajes de estado recomendados:
 | Estado | Mensaje |
 | --- | --- |
 | `running` | "Estoy generando un asset 3D de mayor calidad visual. Te aviso cuando el glb este listo." |
-| `blocked_missing_runtime` | "Esta mejora 3D aun no esta instalada en esta maquina. Uso la ruta 3D estable actual." |
-| `blocked_missing_models` | "Faltan modelos de calidad para esta ruta. Se mantiene la ruta 3D estable mientras se prepara." |
+| `blocked_missing_runtime` | "La ruta 3D principal aun no esta instalada en esta maquina." |
+| `blocked_missing_models` | "Faltan modelos requeridos para la ruta 3D principal. Necesita preparacion tecnica." |
 | `finished` | "Tu asset 3D esta listo para revisarlo en Blender." |
 
 ## Especificacion de workflow V1 (`UC-3D-02`)
 
-Esta fase deja definida la interfaz del workflow, no su declaracion como
-baseline de producto.
+Esta fase deja definida la interfaz vigente del workflow y su superficie
+operativa. El archivo fuente publicado en el repo es:
+
+```text
+ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json
+```
 
 ### Variante A: `image -> Trellis2 GGUF Q4_K_M -> textured glb`
 
@@ -193,7 +217,10 @@ La interfaz de fase 11 se considera preparada cuando:
 - existe runtime aislado definido y verificable
 - existen checks reproducibles de nodos y modelos
 - existe especificacion de entradas/salidas del flujo `UC-3D-02`
+- existe workflow local versionado para la ruta activa `Trellis2 GGUF`
+- `UC-3D-*` reutiliza el mismo modelador 3D sin volver a exponer `Hunyuan3D`
+  como baseline activo
 - existe reporte canonico de estado y bloqueo
 
-La migracion de baseline solo se habilita despues de evidencia visual comparada
-contra `SF3D` y `Hunyuan3D-2mini-Turbo`.
+Las comparativas historicas con `SF3D` y `Hunyuan3D-2mini-Turbo` siguen siendo
+utiles como evidencia, pero ya no definen el alcance activo del repo.

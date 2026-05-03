@@ -7,14 +7,14 @@ Conecta los `UC-3D-*` con alias, workflows, presets y lectura de producto.
 
 | ID | Alias | Entrada | Entrega preferida | Workflow V1 | Preset |
 | --- | --- | --- | --- | --- | --- |
-| `UC-3D-01` | `texto-a-3d` | texto | `asset` aislado | `ComfyUIWorkflows/local/adaptable/uc-3d-01-text-to-asset-sf3d-bridge-v1.json` | `uc-3d-01-text-to-asset-sf3d-bridge` |
-| `UC-3D-02` | `imagen-a-3d` | imagen | `asset` aislado | `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-sf3d-single-image-v1.json` | `uc-3d-02-image-to-asset-sf3d-single-image` |
-| `UC-3D-03` | `texto-a-escena-3d` | texto | `set`, `blockout` o `envolvente` | `ComfyUIWorkflows/local/adaptable/uc-3d-03-text-to-scene-sf3d-asset-pack-bridge-v1.json` | `uc-3d-03-text-to-scene-sf3d-asset-pack-bridge` |
-| `UC-3D-04` | `imagen-a-escena-3d` | imagen | `set`, `blockout` o `envolvente` | `ComfyUIWorkflows/local/adaptable/uc-3d-04-image-to-scene-sf3d-asset-pack-v1.json` | `uc-3d-04-image-to-scene-sf3d-asset-pack` |
+| `UC-3D-01` | `texto-a-3d` | texto | `asset` aislado | `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json` despues de imagen semilla staged | reutiliza baseline `UC-3D-02` |
+| `UC-3D-02` | `imagen-a-3d` | imagen | `asset` aislado | `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json` | `uc-3d-02-image-to-asset-trellis2-gguf-q4` |
+| `UC-3D-03` | `texto-a-escena-3d` | texto | `set`, `blockout` o `envolvente` | `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json` por activo o shell | reutiliza baseline `UC-3D-02` |
+| `UC-3D-04` | `imagen-a-escena-3d` | imagen | `set`, `blockout` o `envolvente` | `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json` por crop, activo o envolvente | reutiliza baseline `UC-3D-02` |
 
 ## Variantes destacadas
 
-La linea `V1` usa un mismo bloque `SF3D` para varios casos:
+La linea activa reutiliza un mismo bloque `Trellis2 GGUF Q4`:
 
 - `UC-3D-01` lo usa despues de generar una imagen semilla
 - `UC-3D-02` lo usa de forma directa sobre la imagen del objeto
@@ -42,11 +42,9 @@ Todos los casos `UC-3D-*` deben leer `Blender` como etapa normal de producto:
 
 ## Estado de madurez
 
-Con corte `2026-04-12`:
+Con corte `2026-05-03`:
 
 - los casos `UC-3D-*` ya quedan modelados en el catalogo Python
-- sus workflows y presets V1 quedan versionados en el repo
-- la baseline actual del `MVP` ya apunta a `SF3D`
-- la validacion real local de `SF3D` sigue pendiente de cerrar por acceso al
-  modelo y alineacion de dependencias
-- la validacion historica con `Hunyuan` ya no cuenta como cierre del `MVP`
+- el baseline activo del repo apunta a `Trellis2 GGUF` dentro de `ComfyUI`
+- `SF3D` y `Hunyuan3D` quedan como referencia historica
+- el workflow local activo reutilizable es `uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json`
