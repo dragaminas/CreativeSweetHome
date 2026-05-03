@@ -36,31 +36,47 @@ _SUPPORTED_TARGET_KINDS = ["uc_3d_asset", "smoke_suite"]
 _UC_3D_TARGETS = {
     "UC-3D-01": RunnerTarget(
         target_id="UC-3D-01",
-        display_label="Texto a objeto o personaje 3D (Hunyuan3D nativo)",
+        display_label="Texto a objeto o personaje 3D (Hunyuan3D legacy)",
         target_kind="uc_3d_asset",
         operation_kind="generate_3d_asset",
-        metadata={"alias": "texto-a-3d", "motor": "hunyuan3d-2mini-turbo"},
+        metadata={
+            "alias": "texto-a-3d",
+            "motor": "hunyuan3d-2mini-turbo",
+            "lifecycle": "legacy",
+        },
     ),
     "UC-3D-02": RunnerTarget(
         target_id="UC-3D-02",
-        display_label="Imagen a objeto o personaje 3D (Hunyuan3D nativo)",
+        display_label="Imagen a objeto o personaje 3D (Hunyuan3D legacy)",
         target_kind="uc_3d_asset",
         operation_kind="generate_3d_asset",
-        metadata={"alias": "imagen-a-3d", "motor": "hunyuan3d-2mini-turbo"},
+        metadata={
+            "alias": "imagen-a-3d",
+            "motor": "hunyuan3d-2mini-turbo",
+            "lifecycle": "legacy",
+        },
     ),
     "UC-3D-03": RunnerTarget(
         target_id="UC-3D-03",
-        display_label="Texto a set de activos o escena 3D (Hunyuan3D nativo)",
+        display_label="Texto a set de activos o escena 3D (Hunyuan3D legacy)",
         target_kind="uc_3d_asset",
         operation_kind="generate_3d_asset",
-        metadata={"alias": "texto-a-escena-3d", "motor": "hunyuan3d-2mini-turbo"},
+        metadata={
+            "alias": "texto-a-escena-3d",
+            "motor": "hunyuan3d-2mini-turbo",
+            "lifecycle": "legacy",
+        },
     ),
     "UC-3D-04": RunnerTarget(
         target_id="UC-3D-04",
-        display_label="Imagen a set de activos o escena 3D (Hunyuan3D nativo)",
+        display_label="Imagen a set de activos o escena 3D (Hunyuan3D legacy)",
         target_kind="uc_3d_asset",
         operation_kind="generate_3d_asset",
-        metadata={"alias": "imagen-a-escena-3d", "motor": "hunyuan3d-2mini-turbo"},
+        metadata={
+            "alias": "imagen-a-escena-3d",
+            "motor": "hunyuan3d-2mini-turbo",
+            "lifecycle": "legacy",
+        },
     ),
 }
 
@@ -136,7 +152,7 @@ class Hunyuan3DRunner(Runner):
     def describe(self) -> RunnerDescription:
         return RunnerDescription(
             runner_id=RUNNER_ID,
-            display_label="Hunyuan3D — línea nativa 3D",
+            display_label="Hunyuan3D — legado historico 3D",
             supported_operation_kinds=_SUPPORTED_OPERATION_KINDS,
             supported_target_kinds=_SUPPORTED_TARGET_KINDS,
             supports_cancel=False,

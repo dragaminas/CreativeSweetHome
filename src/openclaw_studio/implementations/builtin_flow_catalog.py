@@ -670,9 +670,9 @@ BUILTIN_FLOW_CATALOG = (
         friendly_alias="texto-a-3d",
         description=(
             "Prepara un asset 3D desde texto usando una ruta puente: primero "
-            "se obtiene una imagen semilla y despues se pasa por Stable Fast "
-            "3D. La V1 prioriza assets reutilizables y handoff limpio a "
-            "Blender."
+            "se obtiene una imagen semilla y despues se pasa por Trellis2 "
+            "GGUF. La V1 activa reutiliza el mismo baseline image -> 3D de "
+            "UC-3D-02 y deja Blender como handoff normal."
         ),
         output_type=OutputArtifactType.THREE_D_ASSET,
         sample_user_requests=(
@@ -695,14 +695,30 @@ BUILTIN_FLOW_CATALOG = (
         ),
         execution_variants=(
             ExecutionVariant(
-                variant_id="hunyuan3d-2mini-turbo-text-bridge-v1",
-                display_label="Puente texto -> imagen -> Hunyuan3D-2mini-Turbo",
+                variant_id="trellis2-gguf-q4-text-bridge-v1",
+                display_label="Puente texto -> imagen -> Trellis2 GGUF Q4 (ruta activa)",
                 maturity=ImplementationMaturity.ADAPTABLE,
                 supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                workflow_file_references=(
+                    "ComfyUIWorkflows/local/minimum/"
+                    "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json",
+                ),
                 notes=(
-                    "Motor nativo Hunyuan3D fase 10. ComfyUI genera imagen "
-                    "semilla; Hunyuan3D-2mini-Turbo produce el glb en modo "
-                    "shape-first con low_vram_mode.",
+                    "Ruta activa de fase 11. ComfyUI prepara la imagen "
+                    "semilla y despues reutiliza el baseline Trellis2 GGUF "
+                    "Q4 de UC-3D-02 para cerrar el asset y el handoff a "
+                    "Blender.",
+                ),
+            ),
+            ExecutionVariant(
+                variant_id="hunyuan3d-2mini-turbo-text-bridge-v1",
+                display_label="Puente texto -> imagen -> Hunyuan3D-2mini-Turbo (legado fase 10)",
+                maturity=ImplementationMaturity.LEGACY,
+                supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                notes=(
+                    "Linea historica de fase 10. Se conserva solo como "
+                    "referencia tecnica y no forma parte de la ruta 3D "
+                    "activa del repo.",
                 ),
             ),
             ExecutionVariant(
@@ -716,7 +732,7 @@ BUILTIN_FLOW_CATALOG = (
                 ),
                 notes=(
                     "Benchmark de fase 9. SF3D relegado a referencia técnica. "
-                    "La ruta principal pasa ahora por Hunyuan3D nativo.",
+                    "La ruta principal pasa ahora por Trellis2 GGUF.",
                 ),
             ),
         ),
@@ -731,9 +747,10 @@ BUILTIN_FLOW_CATALOG = (
         display_label="Imagen a objeto o personaje 3D",
         friendly_alias="imagen-a-3d",
         description=(
-            "Convierte una imagen de referencia en un asset 3D util. La V1 "
-            "baseline prioriza Stable Fast 3D con una sola imagen y deja la "
-            "calidad hero o multivista para lineas futuras fuera de este MVP."
+            "Convierte una imagen de referencia en un asset 3D util. La ruta "
+            "activa prioriza Trellis2 GGUF Q4 texturizado dentro del "
+            "laboratorio ComfyUI aislado y conserva SF3D y Hunyuan solo como "
+            "benchmarks historicos."
         ),
         output_type=OutputArtifactType.THREE_D_ASSET,
         sample_user_requests=(
@@ -756,13 +773,28 @@ BUILTIN_FLOW_CATALOG = (
         ),
         execution_variants=(
             ExecutionVariant(
+                variant_id="trellis2-gguf-q4-single-image-v1",
+                display_label="Imagen -> Trellis2 GGUF Q4 texturizado (ruta activa)",
+                maturity=ImplementationMaturity.AVAILABLE,
+                supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                workflow_file_references=(
+                    "ComfyUIWorkflows/local/minimum/"
+                    "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json",
+                ),
+                notes=(
+                    "Ruta activa de fase 11. Baseline image -> 3D con "
+                    "Trellis2 GGUF Q4, validado como camino util tambien en "
+                    "baja VRAM y listo para handoff a Blender.",
+                ),
+            ),
+            ExecutionVariant(
                 variant_id="hunyuan3d-2mini-turbo-single-image-v1",
-                display_label="Imagen -> Hunyuan3D-2mini-Turbo baseline",
-                maturity=ImplementationMaturity.ADAPTABLE,
+                display_label="Imagen -> Hunyuan3D-2mini-Turbo (legado fase 10)",
+                maturity=ImplementationMaturity.LEGACY,
                 supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
                 notes=(
-                    "Motor nativo Hunyuan3D fase 10. shape-first con "
-                    "low_vram_mode. Primera corrida a validar en UC-3D-02.",
+                    "Linea historica de fase 10. Se conserva como referencia "
+                    "tecnica fuera del alcance activo del repo.",
                 ),
             ),
             ExecutionVariant(
@@ -776,7 +808,7 @@ BUILTIN_FLOW_CATALOG = (
                 ),
                 notes=(
                     "Benchmark de fase 9. SF3D relegado a referencia técnica. "
-                    "La ruta principal pasa ahora por Hunyuan3D nativo.",
+                    "La ruta principal pasa ahora por Trellis2 GGUF.",
                 ),
             ),
         ),
@@ -793,8 +825,8 @@ BUILTIN_FLOW_CATALOG = (
         description=(
             "Arranca una escena 3D desde texto, pero la V1 la trata como un "
             "puente hacia una imagen semilla y despues prioriza set de "
-            "activos, blockout o envolvente antes que escena monolitica "
-            "final."
+            "activos, blockout o envolvente. El modelador activo por pieza es "
+            "Trellis2 GGUF, no una escena monolitica cerrada."
         ),
         output_type=OutputArtifactType.THREE_D_ASSET_SET,
         sample_user_requests=(
@@ -817,14 +849,28 @@ BUILTIN_FLOW_CATALOG = (
         ),
         execution_variants=(
             ExecutionVariant(
-                variant_id="hunyuan3d-2mini-turbo-scene-text-bridge-v1",
-                display_label="Texto -> imagen concepto -> Hunyuan3D por activo",
+                variant_id="trellis2-gguf-q4-scene-text-bridge-v1",
+                display_label="Texto -> imagen concepto -> Trellis2 GGUF por activo (ruta activa)",
                 maturity=ImplementationMaturity.ADAPTABLE,
                 supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                workflow_file_references=(
+                    "ComfyUIWorkflows/local/minimum/"
+                    "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json",
+                ),
                 notes=(
-                    "Motor nativo Hunyuan3D fase 10. Cada pieza de la escena "
-                    "se genera por separado con Hunyuan3D-2mini-Turbo. "
-                    "Composición final en Blender.",
+                    "Ruta activa de fase 11. La escena se resuelve por piezas "
+                    "o blockout; cada activo reutiliza el baseline Trellis2 "
+                    "GGUF Q4 de UC-3D-02 antes de componer en Blender.",
+                ),
+            ),
+            ExecutionVariant(
+                variant_id="hunyuan3d-2mini-turbo-scene-text-bridge-v1",
+                display_label="Texto -> imagen concepto -> Hunyuan3D por activo (legado fase 10)",
+                maturity=ImplementationMaturity.LEGACY,
+                supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                notes=(
+                    "Linea historica de fase 10. Se conserva solo como "
+                    "referencia tecnica fuera del alcance activo del repo.",
                 ),
             ),
             ExecutionVariant(
@@ -854,8 +900,8 @@ BUILTIN_FLOW_CATALOG = (
         description=(
             "Toma una imagen de interior, exterior o paisaje y la intenta "
             "descomponer en piezas 3D reutilizables. La ruta V1 prioriza "
-            "crops, envolventes y activos aislados generados con Stable Fast "
-            "3D antes que una escena fusionada."
+            "crops, envolventes y activos aislados generados con Trellis2 "
+            "GGUF antes que una escena fusionada."
         ),
         output_type=OutputArtifactType.THREE_D_ASSET_SET,
         sample_user_requests=(
@@ -878,14 +924,29 @@ BUILTIN_FLOW_CATALOG = (
         ),
         execution_variants=(
             ExecutionVariant(
-                variant_id="hunyuan3d-2mini-turbo-scene-image-v1",
-                display_label="Imagen -> recortes -> Hunyuan3D por activo",
+                variant_id="trellis2-gguf-q4-scene-image-v1",
+                display_label="Imagen -> recortes -> Trellis2 GGUF por activo (ruta activa)",
                 maturity=ImplementationMaturity.ADAPTABLE,
                 supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                workflow_file_references=(
+                    "ComfyUIWorkflows/local/minimum/"
+                    "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json",
+                ),
                 notes=(
-                    "Motor nativo Hunyuan3D fase 10. La referencia se "
-                    "descompone en recortes; cada activo se genera con "
-                    "Hunyuan3D-2mini-Turbo. Composición final en Blender.",
+                    "Ruta activa de fase 11. La referencia se descompone en "
+                    "recortes o envolventes; cada activo reutiliza el "
+                    "baseline Trellis2 GGUF Q4 de UC-3D-02 antes de componer "
+                    "en Blender.",
+                ),
+            ),
+            ExecutionVariant(
+                variant_id="hunyuan3d-2mini-turbo-scene-image-v1",
+                display_label="Imagen -> recortes -> Hunyuan3D por activo (legado fase 10)",
+                maturity=ImplementationMaturity.LEGACY,
+                supported_hardware_profiles=BASELINE_COMPATIBLE_PROFILES,
+                notes=(
+                    "Linea historica de fase 10. Se conserva solo como "
+                    "referencia tecnica fuera del alcance activo del repo.",
                 ),
             ),
             ExecutionVariant(
