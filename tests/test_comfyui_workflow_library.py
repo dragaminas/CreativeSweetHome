@@ -51,6 +51,12 @@ class ComfyUIWorkflowLibraryTests(unittest.TestCase):
         )
         self.assertEqual(entry_3d.use_case_id, "UC-3D-02")
         self.assertEqual(entry_3d.template_filename, "imagen-a-3d.json")
+        self.assertTrue(
+            entry_3d.source_path.endswith(
+                "ComfyUIWorkflows/local/minimum/"
+                "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json"
+            )
+        )
 
     def test_sync_creates_template_module_and_manifest(self) -> None:
         sync_result = sync_workflow_templates(
@@ -121,7 +127,10 @@ class ComfyUIWorkflowLibraryTests(unittest.TestCase):
 
         self.assertIn("Workflow: imagen-a-3d (UC-3D-02)", rendered)
         self.assertIn("Categoria 3D", rendered)
-        self.assertIn("Variante actual: Stable Fast 3D single-image (fase 9, benchmark).", rendered)
+        self.assertIn(
+            "Variante actual: Imagen -> Trellis2 GGUF Q4 texturizado (ruta activa).",
+            rendered,
+        )
         self.assertIn("Comando: studio comfyui abre workflow imagen-a-3d", rendered)
 
     def test_render_workflow_advisory_context_mentions_real_graph_structure(self) -> None:
@@ -150,8 +159,14 @@ class ComfyUIWorkflowLibraryTests(unittest.TestCase):
 
         self.assertIn("workflow_alias=imagen-a-3d", rendered)
         self.assertIn("editable_entry_nodes=", rendered)
-        self.assertIn("LoadImage [LoadImage] -> openclaw_object_ref.png", rendered)
-        self.assertIn("StableFast3DSampler x1", rendered)
+        self.assertIn(
+            "OPENCLAW INPUT IMAGE [Trellis2LoadImageWithTransparency] -> openclaw_object_ref.png",
+            rendered,
+        )
+        self.assertIn(
+            "OPENCLAW OUTPUT TEXTURED [Trellis2ExportMesh] -> Textured",
+            rendered,
+        )
 
     def test_render_workflow_comparison_advisory_context_mentions_both_workflows(self) -> None:
         left_entry = resolve_workflow_template_entry(
