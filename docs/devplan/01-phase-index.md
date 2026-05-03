@@ -246,15 +246,15 @@ como gap documental y de evidencia.
 ## Phase 10: Linea 3D nativa con Hunyuan3D
 
 ### Status
-`done`
+`archived`
 
 ### Purpose
-Sustituir la ruta 3D principal por una linea nativa mas clara de operar y con
-mejor lectura de producto.
+Conservar el material reusable de la etapa `Hunyuan3D` sin seguir tratandolo
+como alcance activo del repo.
 
 ### Current Decision
-`Hunyuan3D` es la ruta 3D operativa actual por defecto; `SF3D` queda en
-`legacy`.
+`Hunyuan3D` queda como legado historico y referencia tecnica. La ruta 3D
+vigente del repo pasa a leerse desde la fase `11` con `Trellis2 GGUF`.
 
 ### Stable Artifacts
 - [`../hunyuan3d/installation.md`](../hunyuan3d/installation.md)
@@ -273,20 +273,22 @@ mejor lectura de producto.
 ## Phase 11: Reapertura 3D en ComfyUI con Trellis2 GGUF
 
 ### Status
-`active`
+`done`
 
 ### Purpose
-Evaluar si `Trellis2 GGUF` mejora de forma suficiente la calidad 3D para
-promocionarse sin romper la operacion estable ya lograda con `Hunyuan3D`.
+Consolidar `Trellis2 GGUF` como ruta 3D vigente del repo dentro de un runtime
+`ComfyUI` aislado, manteniendo la operacion reproducible.
 
 ### Current Decision
-Existe `go_tecnico_trellis_q4_textured`, pero todavia faltan comparativa
-formal, gates y politica de promocion/fallback.
+`Trellis2 GGUF` es la linea 3D vigente del repo. `UC-3D-*` ya apunta al
+baseline local de Trellis dentro de `ComfyUI`, mientras `Hunyuan3D` y `SF3D`
+quedan retenidos solo como referencias historicas.
 
 ### Stable Artifacts
 - [`../comfyui/trellis2-gguf-interface.md`](../comfyui/trellis2-gguf-interface.md)
 - [`../comfyui/trellis2-gguf-validation-results.md`](../comfyui/trellis2-gguf-validation-results.md)
 - [`../../scripts/apps/install-trellis2-gguf.sh`](../../scripts/apps/install-trellis2-gguf.sh)
+- [`archive/phase-11-trellis2-summary.md`](archive/phase-11-trellis2-summary.md)
 
 ### Reusable Infrastructure Produced
 - runtime aislado de laboratorio
@@ -294,13 +296,33 @@ formal, gates y politica de promocion/fallback.
 - codigos de salida `0` y `10-14`
 
 ### Open Tasks
-- [`11.6`](tasks/11.6-trellis2-comparative-run.md): comparativa local con fixture historico e imagen creativa
-- [`11.7`](tasks/11.7-trellis2-blender-import-metrics.md): import Blender y metricas de mesh
-- [`11.8`](tasks/11.8-trellis2-visual-comparison.md): comparativa visual formal
-- [`11.9`](tasks/11.9-trellis2-go-no-go-decision.md): decision `go/no-go` con evidencia final
-- [`11.10.4`](tasks/11.10.4-trellis2-installation-docs.md): documentar instalacion, prerequisitos, artefactos y troubleshooting
-- [`11.11.1`](tasks/11.11.1-trellis2-quality-gate.md): gate minimo de calidad
-- [`11.11.2`](tasks/11.11.2-trellis2-operational-gate.md): gate operativo de preflight
-- [`11.11.3`](tasks/11.11.3-trellis2-default-promotion.md): promocion a default
-- [`11.11.4`](tasks/11.11.4-trellis2-hunyuan-fallback.md): fallback automatico a `Hunyuan3D`
-- [`11.11.5`](tasks/11.11.5-trellis2-rollback.md): rollback explicito sin downtime
+- Ninguna
+
+## Phase 12: Integracion de Kimodo para diseno de movimiento
+
+### Status
+`done`
+
+### Purpose
+Incorporar `Kimodo` como herramienta local de diseno de movimiento sin abrir
+otra ruta de instalacion fuera del bootstrap declarativo del repo.
+
+### Current Decision
+`Kimodo` queda integrado al bootstrap declarativo mediante
+`scripts/apps/install-kimodo.sh`, con baseline `source` sobre el upstream
+oficial `nv-tlabs/kimodo`, alternativa `package` para uso black-box y la
+variante del gist de `Aero-Ex` retenida solo como nota experimental.
+
+### Stable Artifacts
+- [`../../scripts/apps/install-kimodo.sh`](../../scripts/apps/install-kimodo.sh)
+- [`../kimodo/installation.md`](../kimodo/installation.md)
+- [`../../scripts/bootstrap/apply-workstation.sh`](../../scripts/bootstrap/apply-workstation.sh)
+- [`../../scripts/bootstrap/show-config.sh`](../../scripts/bootstrap/show-config.sh)
+
+### Reusable Infrastructure Produced
+- flags declarativas `KIMODO_*` en `.env`
+- instalador idempotente `audit/apply`
+- documentacion canonica para baseline oficial y compatibilidad experimental
+
+### Open Tasks
+- Ninguna

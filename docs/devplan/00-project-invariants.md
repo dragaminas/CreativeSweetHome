@@ -13,7 +13,8 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Mantener la wake word y la capa segura como primera frontera del canal
   WhatsApp.
 - Mantener separados los runtimes principales cuando el aislamiento operativo
-  sea parte de la decision arquitectonica, como `ComfyUI` y `Hunyuan3D`.
+  sea parte de la decision arquitectonica, como `ComfyUI` principal y
+  `ComfyUI-trellis2-lab`.
 
 ## Reglas de reutilizacion
 
