@@ -29,6 +29,19 @@ Referencias oficiales:
 | Checkout local por defecto | `~/Kimodo/` |
 | Venv por defecto | `~/Kimodo/.venv/` |
 
+## Capacidades del instalador automático
+
+El script `scripts/apps/install-kimodo.sh` ahora incluye inteligencia para:
+
+- **Detección de GPU**: Identifica NVIDIA, AMD ROCM o CPU automáticamente
+- **Recomendación de PyTorch**: Propone argumentos de instalación optimizados para
+  tu hardware (vs. un default genérico)
+- **Instalación de prerequisitos**: Intenta instalar `cmake` y compiladores con
+  `sudo` si faltan (Debian/Ubuntu y Arch Linux soportados)
+- **Autenticación HF interactiva**: Prompt en modo `apply` para autenticarse en
+  Hugging Face
+- **Guía mejorada**: Mensajes claros sobre qué hacer en cada paso
+
 ## Variables principales
 
 | Variable | Default | Uso |
@@ -37,23 +50,31 @@ Referencias oficiales:
 | `KIMODO_INSTALL_METHOD` | `source` | `source` para checkout editable, `package` para black-box desde git |
 | `KIMODO_REPO_REF` | `main` | branch o tag del repo oficial |
 | `KIMODO_INSTALL_EXTRAS` | `all` | `base`, `demo`, `soma` o `all` |
-| `KIMODO_TORCH_INSTALL_ARGS` | `torch>=2.0` | args pasados a `pip install` antes de instalar `Kimodo` |
+| `KIMODO_TORCH_INSTALL_ARGS` | `torch>=2.0` | args pasados a `pip install` antes de instalar `Kimodo`. El script propone valores optimizados en audit mode si usas el default |
 | `KIMODO_SKIP_MOTION_CORRECTION` | `false` | fallback experimental para omitir la extension nativa |
 | `KIMODO_HF_TOKEN_FILE` | `~/.cache/huggingface/token` | ruta esperada del token HF |
 
-`KIMODO_TORCH_INSTALL_ARGS` existe porque `Kimodo` no instala `torch` por su
-cuenta. Para una GPU concreta conviene reemplazar el default por los argumentos
-del selector oficial de PyTorch antes de correr `apply`.
+**Nota sobre `KIMODO_TORCH_INSTALL_ARGS`**:
+Si usas el valor default (`torch>=2.0`), el script en modo `audit` detectara tu
+GPU y recomendara argumentos optimizados. En `apply` mode usara esos argumentos
+automaticamente.
 
-## Flujo recomendado
+## Flujo recomendado (rápido)
 
 ```bash
 cp .env.example .env
-editor .env
-KIMODO_INSTALL=true scripts/bootstrap/show-config.sh
-KIMODO_INSTALL=true scripts/bootstrap/apply-workstation.sh audit
-KIMODO_INSTALL=true scripts/bootstrap/apply-workstation.sh apply
+KIMODO_INSTALL=true scripts/apps/install-kimodo.sh audit
+# Revisa la salida, especialmente la sección "Deteccion de GPU y PyTorch"
+KIMODO_INSTALL=true scripts/apps/install-kimodo.sh apply
 ```
+
+El script en `apply` mode:
+1. Instala prerequisitos del host (cmake, g++, etc.) con `sudo` si es necesario
+2. Clona/actualiza el repo de Kimodo
+3. Crea el venv
+4. Instala PyTorch con las args optimizadas automáticamente detectadas
+5. Instala Kimodo y sus dependencias
+6. Ofrece autenticacion interactiva en Hugging Face si lo necesitas
 
 Si prefieres ejecutar solo el instalador:
 
@@ -62,24 +83,43 @@ scripts/apps/install-kimodo.sh audit
 scripts/apps/install-kimodo.sh apply
 ```
 
+## Personalización de PyTorch
+
+Para GPUs específicas, puedes definir manualmente los args en `.env`:
+
+```bash
+# Para NVIDIA RTX 4090 (Ada):
+KIMODO_TORCH_INSTALL_ARGS="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124"
+
+# Para NVIDIA H100 (Hopper):
+KIMODO_TORCH_INSTALL_ARGS="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124"
+
+# Para AMD ROCM 5.7:
+KIMODO_TORCH_INSTALL_ARGS="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm5.7"
+
+# Para CPU only:
+KIMODO_TORCH_INSTALL_ARGS="torch torchvision torchaudio"
+```
+
 ## Que hace el instalador
 
-En modo `source`:
+### En modo `audit`:
+1. Valida Python 3.10+
+2. Detecta GPU disponible y propone args de PyTorch optimizados
+3. Verifica si faltan prerequisitos del host
+4. Reporta estado: qué hace falta, qué está listo
+5. **No hace cambios**
 
-1. valida `Python 3.10+` y el `repo_ref` configurado
-2. clona o actualiza `nv-tlabs/kimodo`
-3. crea el `venv` aislado
-4. instala `torch` segun `KIMODO_TORCH_INSTALL_ARGS`
-5. instala `Kimodo` con `pip install -e ".[...]"` y los extras elegidos
-6. reporta si el runtime importa `kimodo`, si existe `kimodo_gen` y si hay
-   token HF disponible
-
-En modo `package`:
-
-1. prepara el mismo `venv`
-2. instala `torch`
-3. instala `Kimodo` desde `git+https://github.com/nv-tlabs/kimodo.git`
-4. mantiene la misma verificacion final del runtime
+### En modo `apply`:
+1. Lo mismo del audit
+2. **Además**:
+   - Instala prerequisitos del host (con `sudo` si es necesario)
+   - Clona o actualiza el repo de Kimodo
+   - Crea venv aislado
+   - Instala PyTorch con args detectados automáticamente
+   - Instala Kimodo con extras elegidos (base, demo, soma, o all)
+   - Ofrece autenticacion interactiva en Hugging Face
+   - Verifica runtime: torch, kimodo, motion_correction, token HF
 
 ## Prerequisitos reales del host
 
@@ -87,27 +127,47 @@ La ruta canonica construye `MotionCorrection` desde el repo oficial. Eso
 requiere al menos:
 
 - `git`
-- `python3`
-- `python3-venv`
+- `python3` con `python3-venv`
 - `cmake`
 - compilador `g++`
 
-Si estos prerequisitos faltan, el script falla de forma explicita en `apply`.
-No intenta abrir otra ruta de instalacion fuera del bootstrap.
+El script intenta instalarlos automaticamente en `apply` mode si faltan. Si la
+instalacion automatica no funciona en tu distro, instala manualmente:
+
+```bash
+# Debian/Ubuntu:
+sudo apt-get update
+sudo apt-get install -y cmake build-essential python3-venv git
+
+# Arch Linux:
+sudo pacman -S --noconfirm cmake gcc python python-venv git
+
+# Fedora/RHEL:
+sudo dnf install -y cmake gcc gcc-c++ redhat-rpm-config python3-devel git
+```
 
 ## Token de Hugging Face
 
-La instalacion puede completarse sin descargar modelos, pero la generacion
-queda bloqueada hasta conceder acceso al repo gated de Llama 3 y autenticar:
+La instalacion puede completarse sin descargar modelos. El script en `apply`
+mode te ofrece autenticacion interactiva.
+
+Para autenticar manualmente:
 
 ```bash
 source ~/Kimodo/.venv/bin/activate
 hf auth login
 ```
 
-Alternativamente puedes poblar `KIMODO_HF_TOKEN_FILE` con el token.
+Alternativamente, descarga tu token desde
+<https://huggingface.co/settings/tokens> y poblalo en `KIMODO_HF_TOKEN_FILE`:
 
-## Smoke barato
+```bash
+mkdir -p ~/.cache/huggingface
+echo "hf_..." > ~/.cache/huggingface/token
+chmod 600 ~/.cache/huggingface/token
+```
+
+## Smoke test
 
 Sin descargar modelos ni lanzar la demo completa:
 
