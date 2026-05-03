@@ -56,7 +56,7 @@ Separacion recomendada:
 /home/eric/ComfyUI/
 /home/eric/Hunyuan3D-2/
 /home/eric/Hunyuan3D-2/.venv/
-/home/eric/Documents/OpenClaw/
+$REPO_ROOT/
 ```
 
 Regla:

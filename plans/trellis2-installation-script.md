@@ -1,5 +1,12 @@
 # Script de Instalacion Automatizada de Trellis2 GGUF
 
+Nota: este archivo queda como nota de apoyo y borrador operativo. La
+documentacion canonica del estado y de las tareas activas vive ahora en:
+
+- `docs/devplan/01-phase-index.md`
+- `docs/devplan/tasks/11.10.4-trellis2-installation-docs.md`
+- `docs/comfyui/trellis2-gguf-interface.md`
+
 ## Objetivo
 Implementar una instalacion reproducible de Trellis2 GGUF en un runtime ComfyUI aislado, con verificaciones automaticas y evidencia de cierre para habilitar su promocion progresiva como motor 3D por defecto.
 
@@ -87,7 +94,7 @@ Pasos:
 Criterios de aceptacion:
 - Ruta por defecto usa Trellis2 cuando preflight pasa
 - Ruta fallback se activa sin intervencion manual cuando preflight falla
-- Decision documentada en `DevPlan.md` y reporte de validacion
+- Decision documentada en `docs/devplan/01-phase-index.md` y en el reporte de validacion
 
 ## Contrato de ejecucion del script objetivo
 Archivo objetivo: `scripts/apps/install-trellis2-gguf.sh`
