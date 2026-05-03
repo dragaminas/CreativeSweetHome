@@ -58,6 +58,9 @@ if [[ "${COMFYUI_INSTALL:-true}" == "true" ]]; then
   fi
   "$SCRIPT_DIR/../services/install-comfyui-service.sh" "$mode"
 fi
+if [[ "${KIMODO_INSTALL:-false}" == "true" ]]; then
+  "$SCRIPT_DIR/../apps/install-kimodo.sh" "$mode"
+fi
 "$SCRIPT_DIR/../apps/design-tools.sh"
 "$SCRIPT_DIR/../apps/blender.sh" status
 "$SCRIPT_DIR/../apps/comfyui.sh" status || true
