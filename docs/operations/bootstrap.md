@@ -36,6 +36,7 @@ mantener una lista larga de pasos manuales.
 - provision de servicios `systemd --user`
 - instalacion opcional de accesos directos `.desktop`
 - setup de ComfyUI y del manager integrado de ComfyUI
+- instalacion opcional de `Kimodo` para CLI y demo local de motion design
 - provision o regeneracion de `comfyui.service`
 - diagnostico final
 
@@ -61,6 +62,11 @@ mantener una lista larga de pasos manuales.
 - `COMFYUI_REPO_REF`
 - `COMFYUI_ENABLE_SERVICE`
 - `COMFYUI_MANAGER_INSTALL_METHOD`
+- `KIMODO_INSTALL`
+- `KIMODO_INSTALL_METHOD`
+- `KIMODO_REPO_REF`
+- `KIMODO_INSTALL_EXTRAS`
+- `KIMODO_TORCH_INSTALL_ARGS`
 - `DISABLE_GNOME_AUTOMOUNT`
 - `HARDEN_OPENCLAW`
 
@@ -74,6 +80,7 @@ scripts/apps/blender.sh status
 scripts/apps/comfyui.sh status
 scripts/apps/comfyui.sh service-status
 scripts/apps/comfyui.sh restart-service
+scripts/apps/install-kimodo.sh audit
 openclaw plugins inspect studio-actions --json
 ```
 
