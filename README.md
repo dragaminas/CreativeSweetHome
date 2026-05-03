@@ -1,169 +1,25 @@
 # OpenClaw Workstation
 
-Repositorio para preparar una workstation Linux dedicada a `OpenClaw` como
-asistente creativo local, usando WhatsApp como interfaz y aplicaciones del
-sistema como backends seguros.
+Repositorio para preparar y operar una workstation Linux dedicada a `OpenClaw`
+como asistente creativo local, con WhatsApp como interfaz segura y aplicaciones
+del sistema como backends controlados.
 
-El foco actual del repo es:
+## Caso soportado hoy
 
-- Blender
-- ComfyUI
-- ComfyUI-Manager
-- Otras apps graficas del sistema
+El repo ya cubre una instalacion reproducible y operable para:
 
-## Resultado esperado
+- bootstrap declarativo desde `.env`
+- hardening base del host y del runtime de `OpenClaw`
+- servicios `systemd --user` para `OpenClaw` y `ComfyUI`
+- acciones seguras por WhatsApp a traves del plugin `studio-actions`
+- uso local de Blender
+- provision y operacion diaria de `ComfyUI`
+- linea 3D nativa con `Hunyuan3D`
+- laboratorio aislado de `Trellis2 GGUF` en evaluacion
 
-- una instalacion Linux dedicada en un disco extraible
-- un usuario de trabajo no privilegiado
-- `OpenClaw` ejecutandose sin `root`
-- acceso a apps creativas locales por acciones seguras
-- uso cotidiano desde WhatsApp con una wake word y lenguaje natural despues
-- 0 acceso operativo desde `OpenClaw` a discos internos no montados ni dados al usuario
-- automontaje de GNOME deshabilitado y verificado
-- bootstrap reproducible mediante `.env` y scripts
-- mantenimiento simple para el adulto responsable
+## Comandos principales
 
-## Precondiciones
-
-- Linux instalado en un disco extraible conectado a un equipo con otros discos internos
-- una sesion grafica GNOME o compatible para lanzar apps GUI
-- un usuario de trabajo normal
-- `sudo` solo para instalacion y ajustes del sistema, nunca para el runtime normal
-- los discos que no deben tocarse quedan fuera de `fstab` y del uso diario
-- un canal enlazable como WhatsApp
-- acceso a modelos o APIs de IA cuando el flujo lo requiera
-
-## Idea principal
-
-La fuente de verdad del setup es `.env`.
-
-Flujo:
-
-1. Ajustas `.env`.
-2. Ejecutas el bootstrap en `audit`.
-3. Ejecutas el bootstrap en `apply`.
-4. Reejecutas el bootstrap cuando cambies rutas, politicas o servicios.
-
-La meta es poder cambiar `.env` y converger el sistema otra vez sin rehacer la
-instalacion a mano.
-
-## Estado as-built de este repo
-
-Hoy el repo ya implementa y documenta:
-
-- bootstrap declarativo basado en `.env`
-- checks de precondiciones
-- hardening de discos, montajes y GNOME
-- hardening base de `~/.openclaw`
-- instalacion o actualizacion reproducible de OpenClaw
-- provision de `systemd --user` para OpenClaw
-- servicio `openclaw-node` opcional y deshabilitado por defecto en este perfil
-- provision operativa de ComfyUI y `ComfyUI-Manager`
-- wrappers locales para Blender y ComfyUI
-- instalacion automatizable de `comfyui.service` desde el propio repo
-- plugin local `studio-actions` para `before_dispatch`
-- primeras acciones seguras para Blender y ComfyUI
-- backup, restore, update y healthcheck de la workstation
-- accesos directos `.desktop` para tareas administrativas comunes
-
-Validado en este sistema:
-
-- `bootstrapPending=false` en `openclaw status --all --json`
-- `studio-actions` cargado como plugin `hook-only`
-- wake word obligatoria en WhatsApp: `studio`
-- mensajes sin wake word en WhatsApp se consumen en silencio y no pasan al agente general
-- `scripts/apps/blender.sh smoke-test` genera `.blend` y `.png`
-- `scripts/openclaw/test-studio-actions-plugin.sh` ejecuta acciones seguras de Blender
-- `comfyui.service` queda `enabled` y escucha en `127.0.0.1:8188`
-- `scripts/openclaw/test-studio-actions-plugin.sh` ejecuta acciones seguras de ComfyUI
-- GNOME con `automount=false` y `automount-open=false`
-- `openclaw status --all --json` reporta WhatsApp enlazado
-- validacion real desde WhatsApp el 2 de abril de 2026: `studio abre blender` funciona y `studio, como esta blender?` responde correctamente
-- `openclaw-node.service` queda deshabilitado para evitar ciclos de pairing no usados
-- existen `backup`, `restore`, `update` y `workstation-health`
-
-Pendiente de cierre final del plan:
-
-- crear y migrar al usuario runtime dedicado en lugar de `eric`
-
-Mejora futura no bloqueante:
-
-- exponer el primer workflow real de video en ComfyUI
-
-## Estructura del repo
-
-```text
-.
-├── README.md
-├── DevPlan.md
-├── SAD.md
-├── .env.example
-├── configs/
-├── docs/
-├── plugins/
-├── src/
-└── scripts/
-```
-
-## Arquitectura emergente de flujos
-
-La provision del sistema sigue siendo principalmente declarativa y basada en
-scripts, pero la capa de producto para flujos guiados de ComfyUI empieza a
-migrar a una base Python en `src/openclaw_studio/`.
-
-Objetivo de esa base:
-
-- modelar interfaces funcionales estables
-- capturar parametros mediante sesiones guiadas
-- separar contratos, logica de negocio e implementaciones concretas
-
-## Configuracion declarativa
-
-Variables importantes en [`.env.example`](/home/eric/Documents/OpenClaw/.env.example):
-
-- `WORK_USER`
-- `WORK_HOME`
-- `STUDIO_DIR`
-- `OPENCLAW_STATE_DIR`
-- `OPENCLAW_INSTALL_METHOD`
-- `OPENCLAW_PACKAGE_SPEC`
-- `OPENCLAW_ENABLE_NODE_SERVICE`
-- `OPENCLAW_DESKTOP_SHORTCUTS_ENABLE`
-- `OPENCLAW_USAGE_PROFILE`
-- `PRIMARY_CHAT_CHANNEL`
-- `OPENCLAW_STUDIO_ACTIONS_ENABLE`
-- `OPENCLAW_STUDIO_ACTIONS_PLUGIN_DIR`
-- `OPENCLAW_STUDIO_ACTIONS_COMMAND_PREFIX`
-- `OPENCLAW_STUDIO_ACTIONS_CHANNELS`
-- `OPENCLAW_STUDIO_ACTIONS_ALLOW_GROUP_MESSAGES`
-- `OPENCLAW_ALLOWED_BLENDER_PROJECTS_DIR`
-- `BLENDER_BIN`
-- `COMFYUI_DIR`
-- `COMFYUI_REPO_URL`
-- `COMFYUI_REPO_REF`
-- `COMFYUI_VENV_DIR`
-- `COMFYUI_HOST`
-- `COMFYUI_PORT`
-- `COMFYUI_INSTALL`
-- `COMFYUI_INSTALL_REQUIREMENTS`
-- `COMFYUI_ENABLE_SERVICE`
-- `COMFYUI_MANAGER_INSTALL`
-- `COMFYUI_MANAGER_INSTALL_METHOD`
-- `COMFYUI_MANAGER_ENABLE`
-- `COMFYUI_MANAGER_USE_LEGACY_UI`
-- `COMFYUI_MANAGER_DIR`
-- `COMFYUI_MANAGER_REPO_URL`
-- `COMFYUI_MANAGER_REPO_REF`
-- `COMFYUI_MANAGER_INSTALL_REQUIREMENTS`
-- `OPENCLAW_ALLOWED_COMFYUI_OUTPUT_DIR`
-- `OPENCLAW_BACKUP_DIR`
-- `OPENCLAW_BACKUP_INCLUDE_CREDENTIALS`
-- `OPENCLAW_BACKUP_INCLUDE_COMFY_OUTPUTS`
-- `DISABLE_GNOME_AUTOMOUNT`
-- `HARDEN_OPENCLAW`
-- `ENABLE_OPENCLAW_SERVICES`
-
-## Bootstrap recomendado
+Bootstrap inicial o convergencia del host:
 
 ```bash
 cp .env.example .env
@@ -173,302 +29,64 @@ scripts/bootstrap/apply-workstation.sh audit
 scripts/bootstrap/apply-workstation.sh apply
 ```
 
-`scripts/bootstrap/apply-workstation.sh` orquesta:
-
-- validacion de precondiciones
-- checks de usuario y grupos peligrosos
-- verificacion de discos y montajes
-- desactivacion de automontaje de GNOME
-- instalacion de dependencias base del host
-- instalacion o validacion de OpenClaw
-- hardening base de OpenClaw
-- preparacion del workspace creativo
-- registro del plugin `studio-actions`
-- provision de servicios de usuario
-- instalacion opcional de accesos directos de escritorio
-- setup base de ComfyUI y del manager integrado de ComfyUI
-- diagnostico final
-
-## Uso desde WhatsApp
-
-La UX actual en WhatsApp exige una wake word al inicio:
-
-- `studio`
-
-Despues de la wake word ya se admite lenguaje natural sencillo:
-
-- `studio abre blender`
-- `studio como esta blender`
-- `studio crea proyecto castillo`
-- `studio abre proyecto castillo`
-- `studio haz una prueba de blender`
-- `studio abre comfyui`
-- `studio inicia comfyui`
-- `studio reinicia comfyui`
-- `studio como esta comfyui`
-
-Para la linea 3D nativa `Hunyuan3D`:
-
-- `studio imagen-a-3d` — genera un objeto 3D desde una imagen (`UC-3D-02`)
-- `studio texto-a-3d` — genera un objeto 3D desde texto (`UC-3D-01`)
-- `studio imagen-a-escena-3d` — genera set de activos desde imagen (`UC-3D-04`)
-- `studio texto-a-escena-3d` — genera set de activos desde texto (`UC-3D-03`)
-- `studio workflows` — lista casos disponibles
-- `studio que hace imagen-a-3d` — descripcion de un caso
-
-Tambien existe modo tecnico:
-
-- `studio`
-- `studio blender status`
-- `studio blender new castillo`
-- `studio blender open castillo`
-- `studio blender smoke-test prueba-ws`
-- `studio comfyui status`
-- `studio comfyui start`
-- `studio comfyui restart`
-- `studio comfyui open`
-- `studio comfyui stop`
-
-Comportamiento importante:
-
-- si el mensaje no empieza con `studio`, el plugin lo consume en silencio en WhatsApp
-- ese mensaje no debe llegar al agente general
-- el canal actual se usa desde el chat contigo mismo, no desde un contacto aparte llamado `OpenClaw`
-
-## Operacion diaria de ComfyUI
-
-El runtime operativo de ComfyUI queda como un servicio de usuario llamado
-`comfyui.service`.
-
-Para instalar o regenerar la unidad desde el propio repo:
+Comprobacion rapida del estado:
 
 ```bash
-scripts/apps/comfyui.sh install-service
-```
-
-Para operacion diaria:
-
-```bash
-scripts/apps/comfyui.sh service-status
-scripts/apps/comfyui.sh start-service
-scripts/apps/comfyui.sh restart-service
-scripts/apps/comfyui.sh stop-service
-scripts/apps/comfyui.sh open-ui
-```
-
-En la practica, reiniciar ComfyUI equivale a reiniciar `comfyui.service`.
-
-## Trellis2 GGUF Q4
-
-Trellis2 se mantiene en un laboratorio aislado para no contaminar el runtime
-principal de `ComfyUI`.
-
-Runtime:
-
-```text
-/home/eric/ComfyUI-trellis2-lab
-```
-
-Preparar el layout ejecutable, pesos `Q4_K_M` y wheels CUDA compatibles con la
-RTX 3090:
-
-```bash
-cd /home/eric/Documents/OpenClaw
-bash scripts/apps/comfyui-trellis2-gguf-prepare-layout.sh
-```
-
-Validar preflight:
-
-```bash
-cd /home/eric/Documents/OpenClaw
-bash scripts/apps/comfyui-trellis2-gguf-validation.sh
-```
-
-Levantar la interfaz web del laboratorio:
-
-```bash
-cd /home/eric/ComfyUI-trellis2-lab
-.venv/bin/python main.py --listen 127.0.0.1 --port 8190 --disable-auto-launch
-```
-
-URL:
-
-```text
-http://127.0.0.1:8190
-```
-
-Si se levanta en paralelo para pruebas API, usar otro puerto y una base SQLite
-separada:
-
-```bash
-cd /home/eric/ComfyUI-trellis2-lab
-.venv/bin/python main.py \
-  --listen 127.0.0.1 \
-  --port 8191 \
-  --disable-auto-launch \
-  --database-url sqlite:////tmp/comfyui-trellis2-q4-texture.db
-```
-
-Workflows definidos hasta ahora:
-
-- `Trellis2_High_Quality_GGUF.json` — workflow PixelArtistry high-quality:
-  `GGUF Q4_K_M`, refinado, texturizado 4096 y preview 3D
-- `Trellis2_High_Quality_GGUF_Q8.json` — misma ruta PixelArtistry con
-  `GGUF Q8_0`
-- `Trellis2_High_Quality_FP16.json` — misma ruta PixelArtistry con pesos
-  `.safetensors` sin cuantizar
-- `Trellis2Multiviews_GGUF.json` — workflow PixelArtistry multiview:
-  dos vistas de entrada, `GGUF Q4_K_M`, unwrap/rasterizer y preview 3D
-- `MeshOnly.json` — mesh desde imagen, sin textura final
-- `MeshOnly_HighQuality.json` — mesh de mayor calidad
-- `MeshOnly_HighQuality_NoCascade.json` — mesh high quality sin cascade
-- `MeshOnly_LowPoly.json` — mesh low-poly
-- `MeshOnly_MultiView.json` — mesh usando multivista
-- `MeshTexturing.json` — aplica textura a un mesh existente
-- `MeshTexturing_MultiView.json` — texturizado multivista de un mesh existente
-- `MeshWithTexturing.json` — imagen a mesh con rama de textura
-- `MeshWithTexturing_LowPoly.json` — imagen a mesh texturizado low-poly
-- `MeshWithTexturing_MultiView.json` — imagen a mesh texturizado multivista
-- `Projection_Hy20_Qwen_2Views.json` — proyeccion/texturizado multivista con 2 vistas
-- `Projection_Hy20_Qwen_4Views.json` — proyeccion/texturizado multivista con 4 vistas
-- `Projection_Hy20_Qwen_6Views.json` — proyeccion/texturizado multivista con 6 vistas
-- `RefineMesh_MeshOnly.json` — refinado de mesh
-
-Ubicacion de los workflows de ejemplo:
-
-```text
-/home/eric/ComfyUI-trellis2-lab/custom_nodes/ComfyUI-Trellis2/example_workflows/
-```
-
-Workflow validado por API para `11.5`:
-
-```text
-image -> Trellis2 GGUF Q4_K_M -> texture_slat -> textured glb
-```
-
-La variante manual `OpenClaw_Q4_Textured_Refined_GLB.json` fue retirada porque
-produce geometria claramente peor que el workflow PixelArtistry.
-
-La ruta correcta para conservar texturas en el GLB es:
-
-```text
-Trellis2ImageCondGenerator
-Trellis2SparseGenerator
-Trellis2ShapeGenerator
-Trellis2TexSlatGenerator
-Trellis2DecodeLatents(texture_slat)
-Trellis2MeshWithVoxelToTrimesh
-Trellis2MeshRefiner
-Trellis2OvoxelExportToGLB
-Trellis2ExportMesh
-```
-
-Evidencia local actual:
-
-```text
-/home/eric/ComfyUI-trellis2-lab/output/openclaw/e2e_trellis_gguf_q4_textured_ovoxel_00001_.glb
-```
-
-Ese GLB contiene `PBRMaterial`, UVs, `baseColorTexture` `1024x1024 RGBA` y
-`metallicRoughnessTexture` `1024x1024 RGB`.
-
-Documentacion especifica:
-
-- [`docs/comfyui/trellis2-gguf-interface.md`](/home/eric/Documents/OpenClaw/docs/comfyui/trellis2-gguf-interface.md)
-- [`docs/comfyui/trellis2-gguf-validation-results.md`](/home/eric/Documents/OpenClaw/docs/comfyui/trellis2-gguf-validation-results.md)
-- [`docs/comfyui/trellis2-gguf-quality-investigation.md`](/home/eric/Documents/OpenClaw/docs/comfyui/trellis2-gguf-quality-investigation.md)
-
-## Operacion diaria de Hunyuan3D
-
-La linea 3D nativa corre como una aplicacion separada de `ComfyUI`, con su
-propio `venv` en `~/Hunyuan3D-2/.venv`.
-
-Para instalar por primera vez (clona repo, crea venv, descarga pesos `~25 GB`):
-
-```bash
-bash scripts/apps/install-hunyuan3d.sh
-```
-
-Para operacion diaria:
-
-```bash
-scripts/apps/hunyuan3d.sh status
-scripts/apps/hunyuan3d.sh service-status
-scripts/apps/hunyuan3d.sh start-service
-scripts/apps/hunyuan3d.sh restart-service
-scripts/apps/hunyuan3d.sh stop-service
-scripts/apps/hunyuan3d.sh open-ui
-```
-
-Puertos:
-
-- web UI: `http://127.0.0.1:7860`
-- API: `http://127.0.0.1:8081` — `POST /generate` (JSON con imagen en `base64`), `GET /status/{uid}`
-
-Para verificar la instalacion y ejecutar una corrida smoke:
-
-```bash
-scripts/apps/hunyuan3d.sh smoke-test
-```
-
-Para activar el servicio systemd (opcional, arranca con el usuario):
-
-```bash
-systemctl --user enable --now hunyuan3d.service
-```
-
-Notas de convivencia con `ComfyUI`:
-
-- `ComfyUI` escucha en `:8188`; `Hunyuan3D` en `:7860` (web UI) y `:8081` (API)
-- cada app tiene su propio `venv` — no se mezclan dependencias
-- con `--enable_t23d` activo, `HunyuanDiT` usa CPU offload (vive en RAM, no en VRAM) para dejar espacio al modelo de forma 3D; pasa a GPU sólo durante inferencia texto→imagen
-- `ComfyUI` activo ocupa ~10.6 GB de VRAM — incompatible con `--enable_t23d`; para usar texto→3D: `comfyui.sh stop-service` → `hunyuan3d.sh start-service`
-- sin `--enable_t23d` (sólo imagen→3D) el consumo es ~5 GB y puede convivir con ComfyUI en `--low_vram_mode`
-
-Documentacion detallada: [`docs/hunyuan3d/installation.md`](/home/eric/Documents/OpenClaw/docs/hunyuan3d/installation.md)
-
-
-
-```bash
-scripts/bootstrap/show-config.sh
-scripts/bootstrap/apply-workstation.sh audit
 scripts/doctor/openclaw-status.sh
 scripts/doctor/workstation-health.sh
 scripts/services/user-services.sh status
-scripts/apps/blender.sh status
-scripts/apps/blender.sh smoke-test blender-smoke
-scripts/apps/comfyui.sh status
-scripts/apps/comfyui.sh install-service
-scripts/apps/comfyui.sh service-status
-scripts/apps/comfyui.sh restart-service
-scripts/apps/comfyui.sh open-ui
-scripts/openclaw/install-studio-actions-plugin.sh apply
-scripts/openclaw/test-studio-actions-plugin.sh "studio como esta blender"
-scripts/openclaw/test-studio-actions-plugin.sh "studio crea proyecto whatsapp-demo"
-scripts/openclaw/test-studio-actions-plugin.sh "studio como esta comfyui"
-scripts/openclaw/test-studio-actions-plugin.sh "studio reinicia comfyui"
-scripts/openclaw/test-studio-actions-plugin.sh "studio abre comfyui"
-scripts/openclaw/backup.sh audit
-scripts/openclaw/update.sh audit
 ```
 
-## Documentacion
+Operacion diaria de aplicaciones:
 
-- Plan por fases y estado: [`DevPlan.md`](/home/eric/Documents/OpenClaw/DevPlan.md)
-- Arquitectura del sistema: [`SAD.md`](/home/eric/Documents/OpenClaw/SAD.md)
-- Acciones seguras: [`docs/architecture/actions.md`](/home/eric/Documents/OpenClaw/docs/architecture/actions.md)
-- Bootstrap: [`docs/operations/bootstrap.md`](/home/eric/Documents/OpenClaw/docs/operations/bootstrap.md)
-- Uso por WhatsApp: [`docs/operations/whatsapp.md`](/home/eric/Documents/OpenClaw/docs/operations/whatsapp.md)
-- Uso diario: [`docs/operations/daily-use.md`](/home/eric/Documents/OpenClaw/docs/operations/daily-use.md)
-- Mantenimiento admin: [`docs/operations/admin-maintenance.md`](/home/eric/Documents/OpenClaw/docs/operations/admin-maintenance.md)
-- Backup y updates: [`docs/operations/backup-and-updates.md`](/home/eric/Documents/OpenClaw/docs/operations/backup-and-updates.md)
-- Checklist de aceptacion: [`docs/operations/acceptance.md`](/home/eric/Documents/OpenClaw/docs/operations/acceptance.md)
-- Blender: [`docs/operations/blender.md`](/home/eric/Documents/OpenClaw/docs/operations/blender.md)
-- ComfyUI: [`docs/operations/comfyui.md`](/home/eric/Documents/OpenClaw/docs/operations/comfyui.md)
-- Discos y automontaje: [`docs/security/disks-and-automount.md`](/home/eric/Documents/OpenClaw/docs/security/disks-and-automount.md)
+```bash
+scripts/apps/blender.sh status
+scripts/apps/comfyui.sh service-status
+scripts/apps/comfyui.sh open-ui
+scripts/apps/hunyuan3d.sh status
+```
 
-## Secretos y datos locales
+Prueba del puente seguro:
 
-- [`.env`](/home/eric/Documents/OpenClaw/.env) es local y no se versiona
-- `.gitignore` excluye `.env` y `.codex`
-- no se deben guardar en Git tokens, sesiones ni credenciales reales
+```bash
+scripts/openclaw/test-studio-actions-plugin.sh "studio como esta blender"
+scripts/openclaw/test-studio-actions-plugin.sh "studio como esta comfyui"
+scripts/actions/runner-action.sh describe comfyui
+```
+
+## Donde seguir
+
+- Arquitectura actual: [docs/SAD.md](docs/SAD.md)
+- Reglas estables para futuras tareas: [docs/devplan/00-project-invariants.md](docs/devplan/00-project-invariants.md)
+- Indice compacto de fases: [docs/devplan/01-phase-index.md](docs/devplan/01-phase-index.md)
+- Mapa entre features, arquitectura y plan: [docs/devplan/feature-map.md](docs/devplan/feature-map.md)
+- Tareas activas autocontenidas: [docs/devplan/tasks/](docs/devplan/tasks/)
+- Resumenes historicos: [docs/devplan/archive/](docs/devplan/archive/)
+
+## Documentacion operativa
+
+- Bootstrap: [docs/operations/bootstrap.md](docs/operations/bootstrap.md)
+- WhatsApp: [docs/operations/whatsapp.md](docs/operations/whatsapp.md)
+- ComfyUI: [docs/operations/comfyui.md](docs/operations/comfyui.md)
+- Blender: [docs/operations/blender.md](docs/operations/blender.md)
+- Uso diario: [docs/operations/daily-use.md](docs/operations/daily-use.md)
+- Mantenimiento y backups: [docs/operations/admin-maintenance.md](docs/operations/admin-maintenance.md), [docs/operations/backup-and-updates.md](docs/operations/backup-and-updates.md)
+
+## Estructura relevante
+
+```text
+.
+├── README.md
+├── SAD.md
+├── DevPlan.md
+├── docs/
+│   ├── SAD.md
+│   └── devplan/
+├── configs/
+├── plugins/
+├── scripts/
+└── src/
+```
+
+`SAD.md` y `DevPlan.md` en la raiz existen solo como puntos de compatibilidad.
+Las fuentes canonicas viven en `docs/SAD.md` y `docs/devplan/`.
