@@ -14,8 +14,8 @@ El repo ya cubre una instalacion reproducible y operable para:
 - acciones seguras por WhatsApp a traves del plugin `studio-actions`
 - uso local de Blender
 - provision y operacion diaria de `ComfyUI`
-- linea 3D nativa con `Hunyuan3D`
-- laboratorio aislado de `Trellis2 GGUF` en evaluacion
+- linea 3D actual con `Trellis2 GGUF` sobre un runtime `ComfyUI` aislado
+- `Hunyuan3D` solo como material historico fuera del alcance activo actual
 
 ## Comandos principales
 
@@ -43,7 +43,7 @@ Operacion diaria de aplicaciones:
 scripts/apps/blender.sh status
 scripts/apps/comfyui.sh service-status
 scripts/apps/comfyui.sh open-ui
-scripts/apps/hunyuan3d.sh status
+bash scripts/apps/comfyui-trellis2-gguf-validation.sh
 ```
 
 Prueba del puente seguro:

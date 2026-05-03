@@ -25,17 +25,21 @@ Cada JSON derivado incluye metadatos en `extra.openclaw` con:
 | `adaptable/uc-img-01-text-to-image-z-image-template-v1.json` | `Text to Image (Z-Image-Turbo).json` | semilla template para `UC-IMG-01` |
 | `adaptable/uc-vid-03-image-to-video-wan22-template-v1.json` | `Image to Video (Wan 2.2).json` | semilla template para `UC-VID-03` |
 | `adaptable/uc-vid-04-video-upscale-ganx4-template-v1.json` | `Video Upscale(GAN x4).json` | referencia simple para `UC-VID-04` |
-| `adaptable/uc-3d-01-text-to-asset-sf3d-bridge-v1.json` | `stable-fast-3d/demo_files/workflows/sf3d_example.json` | puente `UC-3D-01` con imagen semilla staged antes de `SF3D` |
-| `minimum/uc-3d-02-image-to-asset-sf3d-single-image-v1.json` | `stable-fast-3d/demo_files/workflows/sf3d_example.json` | baseline `single image -> asset 3D` para `UC-3D-02` |
-| `adaptable/uc-3d-03-text-to-scene-sf3d-asset-pack-bridge-v1.json` | `stable-fast-3d/demo_files/workflows/sf3d_example.json` | puente `UC-3D-03` orientado a set de activos y envolventes |
-| `adaptable/uc-3d-04-image-to-scene-sf3d-asset-pack-v1.json` | `stable-fast-3d/demo_files/workflows/sf3d_example.json` | descomposicion de escena a activos o shell usando `SF3D` por pieza |
+| `minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json` | `ComfyUIWorkflows/Trellis2_High_Quality_GGUF.json` | baseline activo `image -> asset 3D` con `Trellis2 GGUF Q4`, reutilizado por `UC-3D-*` |
 
 ## Archivo historico
 
-Las variantes exploratorias previas de `Hunyuan 3D` y `PartCrafter` se han
-conservado en `historical/hunyuan-3d-validacion-de-hipotesis/` como anexo de
-validacion tecnica. No forman parte del baseline vigente del producto ni deben
-publicarse como workflows activos del `MVP`.
+Las variantes previas de `SF3D`, `Hunyuan 3D` y `PartCrafter` se conservan
+solo como anexo historico de validacion tecnica. No forman parte del baseline
+vigente del producto ni deben publicarse como workflows activos del `MVP`.
+
+Referencias historicas en este arbol:
+
+- `adaptable/uc-3d-01-text-to-asset-sf3d-bridge-v1.json`
+- `minimum/uc-3d-02-image-to-asset-sf3d-single-image-v1.json`
+- `adaptable/uc-3d-03-text-to-scene-sf3d-asset-pack-bridge-v1.json`
+- `adaptable/uc-3d-04-image-to-scene-sf3d-asset-pack-v1.json`
+- `historical/hunyuan-3d-validacion-de-hipotesis/`
 
 ## Que se ha normalizado aqui
 

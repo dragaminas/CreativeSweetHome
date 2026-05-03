@@ -15,8 +15,11 @@ El sistema soporta hoy estas capacidades operativas:
 - plugin local `studio-actions` para WhatsApp
 - wrappers seguros para Blender y `ComfyUI`
 - runner canonico para validaciones y operaciones de `ComfyUI`
-- linea 3D nativa basada en `Hunyuan3D`
-- laboratorio aislado de `Trellis2 GGUF` en `ComfyUI`
+- linea 3D actual basada en `Trellis2 GGUF` dentro de un runtime `ComfyUI`
+  aislado
+- instalacion opcional de `Kimodo` como backend local de motion design
+- artefactos `Hunyuan3D` retenidos solo como referencia historica y legado
+  tecnico
 
 No es un historial del proyecto. La evolucion por fases vive en
 [devplan](devplan/01-phase-index.md) y sus [resumenes de archive](devplan/archive/).
@@ -34,8 +37,8 @@ registro canonico de runners y wrappers seguros
         |
         +--> Blender
         +--> ComfyUI
-        +--> Hunyuan3D
-        +--> laboratorio Trellis2 GGUF
+        +--> runtime 3D Trellis2 GGUF
+        +--> Kimodo
 ```
 
 ## Componentes y limites
@@ -61,6 +64,7 @@ Responsabilidades:
 - preparar el workspace creativo
 - provisionar servicios de usuario
 - instalar o regenerar `ComfyUI`
+- instalar opcionalmente `Kimodo`
 
 ### Runtime de OpenClaw y `studio-actions`
 
@@ -117,7 +121,9 @@ Piezas canonicas:
 #### ComfyUI
 
 Backend principal para imagen y video, con servicio de usuario, biblioteca de
-workflows locales y runner de smoke ya operativo.
+workflows locales y runner de smoke ya operativo. La ruta 3D activa de
+`Trellis2 GGUF` se publica desde la misma biblioteca `openclaw-workflows`;
+no requiere un runner 3D nuevo paralelo.
 
 Piezas canonicas:
 
@@ -129,8 +135,10 @@ Piezas canonicas:
 
 #### Hunyuan3D
 
-Ruta 3D operativa actual por defecto. Corre fuera de `ComfyUI`, con su propio
-runtime, `API` y bridge a `Blender`.
+Material historico fuera del alcance activo actual del repo. Sus scripts,
+docs y runner permanecen como referencia tecnica mientras la linea 3D vigente
+se consolida sobre `Trellis2 GGUF`. El runner `hunyuan3d` debe leerse como
+legado historico, no como ownership vigente de `UC-3D-*`.
 
 Piezas canonicas:
 
@@ -142,16 +150,30 @@ Piezas canonicas:
 
 #### Trellis2 GGUF
 
-Linea experimental dentro de un runtime `ComfyUI` aislado. No es el baseline
-de producto todavia.
+Ruta 3D actual del repo dentro de un runtime `ComfyUI` aislado. La operacion
+vigente y la documentacion activa deben partir de esta linea, no de
+`Hunyuan3D`.
 
 Piezas canonicas:
 
 - `scripts/apps/install-trellis2-gguf.sh`
 - `scripts/apps/comfyui-trellis2-gguf-prepare-layout.sh`
 - `scripts/apps/comfyui-trellis2-gguf-validation.sh`
+- `ComfyUIWorkflows/local/minimum/uc-3d-02-image-to-asset-trellis2-gguf-q4-v1.json`
 - [comfyui/trellis2-gguf-interface.md](comfyui/trellis2-gguf-interface.md)
 - [comfyui/trellis2-gguf-validation-results.md](comfyui/trellis2-gguf-validation-results.md)
+
+#### Kimodo
+
+Backend local opcional para diseno de movimiento, instalado desde el mismo
+bootstrap declarativo y aislado en su propio `venv`. En el estado actual del
+repo solo cubre instalacion reproducible y uso local por CLI/demo; todavia no
+abre un runner, accion segura ni bridge dedicado a `Blender`.
+
+Piezas canonicas:
+
+- `scripts/apps/install-kimodo.sh`
+- [kimodo/installation.md](kimodo/installation.md)
 
 #### SF3D
 
@@ -195,9 +217,12 @@ Documentacion de apoyo:
 - el runtime principal usa servicios de usuario antes que servicios root
 - la capa de chat usa wake word y acciones seguras, no shell arbitrario
 - las operaciones con ciclo de vida reutilizan el contrato de runner
-- `Hunyuan3D` es la ruta 3D operativa actual
-- `Trellis2 GGUF` sigue en evaluacion y solo debe promocionarse con gates
-  explicitos
+- `Trellis2 GGUF` es la ruta 3D vigente del repo y se publica desde la
+  biblioteca `openclaw-workflows`
+- `Kimodo` se instala como backend local opcional desde el bootstrap, sin ruta
+  paralela y sin exposicion por chat en esta fase
+- `Hunyuan3D` queda fuera del alcance activo actual y solo se conserva como
+  referencia historica
 - `SF3D` queda en estado `legacy` y benchmark
 
 ## Documentos relacionados
