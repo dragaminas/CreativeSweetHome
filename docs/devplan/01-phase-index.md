@@ -387,7 +387,7 @@ queda fuera del alcance de esta fase.
 ## Phase 14: Rigging humanoide automatizado con Blender y Rigify
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Definir una ruta local, gratuita y Linux-first para que un usuario principiante
@@ -400,8 +400,11 @@ La fase depende del handoff preparado por la fase `13`. `OpenClaw` debe seguir
 siendo la unica capa de orquestacion y UX mediante el entrypoint canonico del
 contrato de runner; `Blender` background Python debe resolver import,
 metarig/armature, activacion de `Rigify`, generacion del rig, pesos,
-validacion basica y export. Herramientas pagas, Windows-only o web-only pueden
-servir solo como comparativa, no como ruta core.
+validacion basica y export. El primer slice queda fijado con `Rigify` bundled
+en `Blender` mas `Armature Deform With Automatic Weights`; no se justifica
+anadir otro helper libre al camino core hasta que la prueba real de la fase
+demuestre un bloqueo repetible. Herramientas pagas, Windows-only o web-only
+pueden servir solo como comparativa, no como ruta core.
 
 ### Stable Artifacts
 - [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
@@ -412,7 +415,9 @@ servir solo como comparativa, no como ruta core.
 
 ### Reusable Infrastructure Produced
 - decision documentada para la ruta gratuita de rigging humanoide Linux-first
+- baseline del primer slice: `Rigify` + auto weights + export local
 - contrato reutilizable de handoff `cleanup -> rigging`
+- contrato futuro `prepared humanoid -> create rig -> validate -> export`
 - plan de validacion automatica de deformaciones para personajes humanoides
 - reporting beginner-friendly y criterios de diagnostico/fallback
 
@@ -422,28 +427,26 @@ servir solo como comparativa, no como ruta core.
 - la entrada obligatoria de la fase es el output `cleaned/remeshed` de la fase
   `13`, sin abrir otro pipeline paralelo de preparacion
 - `Blender` background Python debe hacer import, activacion de `Rigify`,
-  generacion del rig, asignacion de pesos, validacion y export
+  generacion del rig, asignacion de pesos con `automatic weights`, validacion
+  y export
 - la validacion automatica debe cubrir al menos: levantar brazos, doblar
   codos, doblar rodillas, rotar cabeza e inclinar torso
 - la salida debe incluir evidencia revisable y feedback legible para
   principiantes sin exigir UI de `Blender`
 
 ### Planned Breakdown
-- fijar si `Rigify` puro basta para el primer slice o si se necesita un helper
-  libre adicional bien justificado
-- definir el contrato de orquestacion y evidencia del futuro flujo `Create rig`
-  sin abrir una CLI ad hoc paralela
-- definir el script canonico de instalacion o audit de dependencias de
-  rigging, incluyendo `Blender`, disponibilidad o activacion de `Rigify` y
-  cualquier helper libre adicional solo si la decision de la fase lo justifica
+- registrar una futura operacion canonica tipo `create_rig_humanoid` bajo el
+  runner `blender`, sin abrir una CLI ad hoc paralela
+- preparar el futuro script canonico `scripts/apps/install-3d-rigging-deps.sh`
+  y su hook declarativo al bootstrap, auditando `Blender`, disponibilidad o
+  activacion de `Rigify` y helpers adicionales solo si el gate real lo exige
+- usar el output `cleaned/remeshed` y la evidencia de la fase `13` como input
+  obligatorio del handoff, no como nota informal
 - ejecutar una prueba end-to-end real como gate explicito antes de marcar la
   fase como `done`
 - fijar criterios de `pass`, `soft_pass_with_fallback`, `fail_quality` y
   `blocked_*` para rigging humanoide automatico
 
 ### Open Tasks
-- [`14.1`](tasks/14.1-blender-rigify-humanoid-rigging-plan.md): definir la
-  ruta gratuita Linux-first, su dependencia del output `cleaned/remeshed` de
-  la fase `13`, la validacion automatica y el reporting beginner-friendly
 - [`14.2`](tasks/14.2-phase14-e2e-proof.md): reservar y ejecutar despues la
   prueba end-to-end real de la fase `14` como gate de cierre
