@@ -21,6 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    subparsers.add_parser("list-runners")
+
     describe_parser = subparsers.add_parser("describe")
     describe_parser.add_argument("runner_id")
 
@@ -110,6 +112,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     registry = get_default_runner_registry()
+
+    if args.command == "list-runners":
+        payload = [
+            registry.require(runner_id).describe()
+            for runner_id in registry.list_runner_ids()
+        ]
+        print_payload(payload, as_json=args.json)
+        return 0
 
     try:
         runner = registry.require(args.runner_id)

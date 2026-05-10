@@ -1,0 +1,75 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+import type { DirectoryStatus, StudioState } from '$lib/types/product';
+import { resolveRepoContext } from './env';
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function directoryStatus(
+  id: string,
+  label: string,
+  targetPath: string,
+  note: string
+): Promise<DirectoryStatus> {
+  return {
+    id,
+    label,
+    path: targetPath,
+    exists: await pathExists(targetPath),
+    note
+  };
+}
+
+export async function loadStudioState(): Promise<StudioState> {
+  const context = resolveRepoContext();
+
+  return {
+    repoRoot: context.repoRoot,
+    runnerContractPath: path.join(
+      context.repoRoot,
+      'docs',
+      'architecture',
+      'runner-interface.md'
+    ),
+    directories: await Promise.all([
+      directoryStatus(
+        'studio-root',
+        'Studio root',
+        context.studioDir,
+        'Raiz filesystem-first del producto.'
+      ),
+      directoryStatus(
+        'assets3d',
+        'Assets3D',
+        context.assets3dDir,
+        'Destino canonico para candidatos, cleanup y handoffs 3D.'
+      ),
+      directoryStatus(
+        'exports',
+        'Exports',
+        context.exportsDir,
+        'Salida canonica para renders, tomas y material final.'
+      ),
+      directoryStatus(
+        'blender-projects',
+        'BlenderProjects',
+        context.blenderProjectsDir,
+        'Workspace local permitido para proyectos asistidos en Blender.'
+      ),
+      directoryStatus(
+        'comfyui-workspace',
+        'ComfyUI',
+        context.comfyWorkspaceDir,
+        'Area local reservada para el engine y assets intermedios.'
+      )
+    ])
+  };
+}
