@@ -51,6 +51,9 @@ if [[ "${INSTALL_DESKTOP_SHORTCUTS:-true}" == "true" && "${OPENCLAW_DESKTOP_SHOR
 fi
 
 print_header "Integracion creativa"
+if [[ "${PRE_RIG_3D_DEPS_INSTALL:-false}" == "true" ]]; then
+  "$SCRIPT_DIR/../apps/install-3d-pre-rig-deps.sh" "$mode"
+fi
 if [[ "${COMFYUI_INSTALL:-true}" == "true" ]]; then
   "$SCRIPT_DIR/../apps/install-comfyui.sh" "$mode"
   if [[ "${COMFYUI_MANAGER_INSTALL:-true}" == "true" ]]; then

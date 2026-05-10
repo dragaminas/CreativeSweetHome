@@ -62,6 +62,7 @@ Responsabilidades:
 - endurecer usuario, discos y GNOME
 - instalar o actualizar `OpenClaw`
 - preparar el workspace creativo
+- orquestar dependencias creativas habilitadas por `.env` desde scripts del repo
 - provisionar servicios de usuario
 - instalar o regenerar `ComfyUI`
 - instalar opcionalmente `Kimodo`
@@ -110,13 +111,19 @@ Responsabilidades:
 
 #### Blender
 
-Backend local para proyectos, inspeccion y handoff.
+Backend local para proyectos, inspeccion, handoff y cleanup pre-rig.
 
 Piezas canonicas:
 
 - `scripts/apps/blender.sh`
+- `scripts/apps/install-3d-pre-rig-deps.sh`
+- `scripts/apps/instant-meshes.sh`
+- `scripts/apps/blender_pre_rig_cleanup.py`
+- `src/openclaw_studio/runners/blender.py`
 - `scripts/actions/blender-action.sh`
+- `scripts/actions/runner-action.sh`
 - [operations/blender.md](operations/blender.md)
+- [operations/3d-pre-rig-cleanup.md](operations/3d-pre-rig-cleanup.md)
 
 #### ComfyUI
 

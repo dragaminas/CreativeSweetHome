@@ -35,6 +35,8 @@ mantener una lista larga de pasos manuales.
 - registro del plugin `studio-actions`
 - provision de servicios `systemd --user`
 - instalacion opcional de accesos directos `.desktop`
+- instalacion opcional de dependencias de phase `13` para `Blender` e
+  `Instant Meshes`
 - setup de ComfyUI y del manager integrado de ComfyUI
 - instalacion opcional de `Kimodo` para CLI y demo local de motion design
 - provision o regeneracion de `comfyui.service`
@@ -58,6 +60,9 @@ mantener una lista larga de pasos manuales.
 - `OPENCLAW_STUDIO_ACTIONS_ENABLE`
 - `OPENCLAW_STUDIO_ACTIONS_COMMAND_PREFIX`
 - `ENABLE_OPENCLAW_SERVICES`
+- `PRE_RIG_3D_DEPS_INSTALL`
+- `BLENDER_INSTALL_METHOD`
+- `INSTANT_MESHES_REPO_REF`
 - `COMFYUI_INSTALL`
 - `COMFYUI_REPO_REF`
 - `COMFYUI_ENABLE_SERVICE`
@@ -76,7 +81,9 @@ mantener una lista larga de pasos manuales.
 scripts/doctor/openclaw-status.sh
 scripts/doctor/workstation-health.sh
 scripts/services/user-services.sh status
+bash scripts/apps/install-3d-pre-rig-deps.sh audit
 scripts/apps/blender.sh status
+scripts/apps/instant-meshes.sh status
 scripts/apps/comfyui.sh status
 scripts/apps/comfyui.sh service-status
 scripts/apps/comfyui.sh restart-service
