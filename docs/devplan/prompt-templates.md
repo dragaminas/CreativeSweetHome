@@ -29,6 +29,11 @@ Constraints:
 - derive reusable infrastructure from canonical docs if I did not list it
 - do not create duplicate runners, manifests, evidence roots, contracts or CLIs
 - keep the result integrated in `docs/devplan/`
+- if Scope is `new phase` or phase-level refinement, always decompose into at
+  least one leaf task file under `docs/devplan/tasks/` in the same change
+- do not leave `active` or `pending` phases with placeholder open tasks
+- keep `docs/devplan/feature-map.md` pointing to concrete task files for active
+  work
 - update canonical docs that must stay in sync
 - after planning edits, run `scripts/devplan/check-task-files.sh`
 

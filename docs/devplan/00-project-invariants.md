@@ -6,9 +6,18 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 
 - Preferir scripts reproducibles e idempotentes antes que procedimientos
   manuales.
+- Toda dependencia real de host, runtime, binario, modelo o libreria externa
+  que una feature, fase o tarea necesite para operar debe tener una ruta de
+  instalacion o provision reproducible bajo `scripts/`, salvo bloqueo
+  documentado y justificado.
+- Si una dependencia puede instalarse o prepararse desde el repo, no debe
+  quedar como paso manual oculto solo en prose o en un README externo.
 - Preferir servicios `systemd --user` antes que servicios root, salvo requisito
   explicito del sistema.
 - Tratar `.env` como la fuente declarativa principal del setup.
+- El bootstrap central `scripts/bootstrap/apply-workstation.sh` debe poder
+  orquestar las dependencias habilitadas por `.env` sin obligar a una segunda
+  lista de pasos manuales fuera del repo.
 - No exponer ejecucion arbitraria de shell a traves de acciones de chat.
 - Mantener la wake word y la capa segura como primera frontera del canal
   WhatsApp.
@@ -31,6 +40,15 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 ## Reglas de validacion
 
 - Toda feature operativa necesita una ruta de smoke validation barata.
+- Toda fase operativa debe reservar una tarea hoja dedicada a la prueba
+  end-to-end real de la fase antes de poder marcarse como `done`.
+- La prueba end-to-end de una fase es un gate explicito del plan, no una nota
+  implicita dentro de otra tarea de planning o implementacion.
+- Toda dependencia instalada por script debe tener al menos una ruta de
+  verificacion barata como `audit`, `status`, `--version`, import basico o
+  smoke test real, siempre que sea tecnicamente posible.
+- Si una smoke validation no es posible o no es barata, la task file debe
+  explicarlo de forma explicita en vez de omitirla.
 - La evidencia debe quedar publicada en una ruta revisable cuando el flujo la
   requiera.
 - La documentacion debe describir comportamiento probado, no comportamiento
@@ -48,9 +66,27 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Cada tarea activa debe ser autocontenida para un chat nuevo de Codex.
 - Cada tarea activa debe declarar que infraestructura debe reutilizarse y que
   infraestructura no debe duplicarse.
+- Cada tarea activa que introduzca o dependa de software externo debe declarar
+  como se instala o provisiona desde el repo, o dejar el bloqueo documentado.
 - Cada tarea activa debe incluir una seccion `Canonical Docs to Update`.
 - Si una tarea esta bloqueada, el bloqueo debe quedar explicito y basado en el
   estado real del repo o del entorno.
+
+## Reglas de descomposicion de fases
+
+- Toda fase con estado `active` o `pending` debe tener al menos una tarea hoja
+  enlazada en `### Open Tasks` dentro de `docs/devplan/01-phase-index.md`.
+- Toda fase con estado `active` o `pending` debe incluir, entre sus tareas
+  hoja, una tarea dedicada de prueba end-to-end real de la fase, aunque esa
+  prueba quede pendiente para mas adelante.
+- No se considera valido dejar una fase activa solo con texto narrativo o
+  placeholders como "desglosar despues"; el desglose minimo debe existir en
+  `docs/devplan/tasks/` dentro del mismo cambio.
+- Si se crea o reabre una fase, el mismo cambio debe crear o actualizar sus
+  task files ejecutables y sincronizar `docs/devplan/feature-map.md` con esos
+  enlaces.
+- Solo las fases `done`, `paused`, `archived` o `legacy` pueden quedar sin
+  tareas abiertas, y deben declararlo explicitamente como `Ninguna`.
 
 ## Reglas de lectura para Codex
 

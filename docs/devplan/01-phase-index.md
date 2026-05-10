@@ -30,7 +30,7 @@ idempotentes.
 ## Phase 1: Hardening del sistema anfitrion
 
 ### Status
-`active`
+`done`
 
 ### Purpose
 Reducir superficie de riesgo del host antes de operar el runtime creativo de
@@ -326,3 +326,124 @@ variante del gist de `Aero-Ex` retenida solo como nota experimental.
 
 ### Open Tasks
 - Ninguna
+
+## Phase 13: Cleanup 3D pre-rigging con Blender e Instant Meshes
+
+### Status
+`active`
+
+### Purpose
+Preparar modelos humanoides 3D generados por AI para una etapa posterior de
+rigging mediante una cadena reproducible y beginner-friendly:
+`OpenClaw -> Blender cleanup -> Instant Meshes`.
+
+### Current Decision
+La orquestacion debe entrar por un unico entrypoint canonico del contrato de
+runner. `Blender` en background hace import, cleanup conservador, validacion y
+export; `Instant Meshes` remalla como etapa separada; el rigging posterior
+queda fuera del alcance de esta fase.
+
+### Stable Artifacts
+- [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
+- [`../../scripts/actions/runner-action.sh`](../../scripts/actions/runner-action.sh)
+- [`../../scripts/apps/blender.sh`](../../scripts/apps/blender.sh)
+- [`../../scripts/apps/install-3d-pre-rig-deps.sh`](../../scripts/apps/install-3d-pre-rig-deps.sh)
+- [`../../scripts/apps/instant-meshes.sh`](../../scripts/apps/instant-meshes.sh)
+- [`../../src/openclaw_studio/runners/blender.py`](../../src/openclaw_studio/runners/blender.py)
+- [`../operations/blender.md`](../operations/blender.md)
+- [`../operations/3d-pre-rig-cleanup.md`](../operations/3d-pre-rig-cleanup.md)
+- [`../comfyui/3d-blender-bridge.md`](../comfyui/3d-blender-bridge.md)
+
+### Reusable Infrastructure Produced
+- contrato canonico de orquestacion por runner reutilizable para backends DCC
+- wrapper local de `Blender` e `Instant Meshes` integrados al repo
+- script canonico de instalacion y audit para dependencias de host de phase `13`
+- hook declarativo al bootstrap central para dependencias de cleanup pre-rig
+- `inputs` y `options` estructurados en el entrypoint canonico de runner
+- helper reusable de Blender background para cleanup conservador
+- convenciones de handoff 3D y rutas base en `Assets3D`
+
+### First Slice
+- `OpenClaw` debe ser la unica UX y capa de orquestacion: seleccion de
+  archivos, `run_id`, estados, evidencia y modo `auto` o `debug`
+- `Blender` background Python debe hacer import, cleanup conservador,
+  validacion y export
+- `Instant Meshes` debe ejecutarse como etapa separada de remeshing antes del
+  handoff siguiente
+- el cleanup `v1` debe cubrir: aplicar transforms de escala y rotacion,
+  centrar personaje, apoyar el punto mas bajo en `Z=0`, recalcular normales,
+  remover loose geometry cuando sea seguro, detectar y permitir remover
+  flotantes muy pequenos, unir piezas solo con justificacion, reducir
+  poligonos solo por encima de un umbral conservador, exportar a `Instant
+  Meshes` y recolectar la salida remesheada
+- la evidencia minima debe incluir modelos before/after, logs de comando y un
+  cleanup report simple; la aceptacion no requiere un rig perfecto
+
+### Open Tasks
+- [`13.3`](tasks/13.3-phase13-e2e-proof.md): ejecutar la prueba end-to-end
+  real de la fase `13` con dependencias instaladas, input humanoide y
+  evidencia revisable
+
+## Phase 14: Rigging humanoide automatizado con Blender y Rigify
+
+### Status
+`pending`
+
+### Purpose
+Definir una ruta local, gratuita y Linux-first para que un usuario principiante
+pueda pasar de un humanoide ya `cleaned/remeshed` a un modelo riggeado
+mediante una accion simple de `OpenClaw`, con `Blender` ejecutando el trabajo
+real en background.
+
+### Current Decision
+La fase depende del handoff preparado por la fase `13`. `OpenClaw` debe seguir
+siendo la unica capa de orquestacion y UX mediante el entrypoint canonico del
+contrato de runner; `Blender` background Python debe resolver import,
+metarig/armature, activacion de `Rigify`, generacion del rig, pesos,
+validacion basica y export. Herramientas pagas, Windows-only o web-only pueden
+servir solo como comparativa, no como ruta core.
+
+### Stable Artifacts
+- [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
+- [`../../scripts/actions/runner-action.sh`](../../scripts/actions/runner-action.sh)
+- [`../../scripts/apps/blender.sh`](../../scripts/apps/blender.sh)
+- [`../operations/blender.md`](../operations/blender.md)
+- [`../comfyui/3d-blender-bridge.md`](../comfyui/3d-blender-bridge.md)
+
+### Reusable Infrastructure Produced
+- decision documentada para la ruta gratuita de rigging humanoide Linux-first
+- contrato reutilizable de handoff `cleanup -> rigging`
+- plan de validacion automatica de deformaciones para personajes humanoides
+- reporting beginner-friendly y criterios de diagnostico/fallback
+
+### First Slice
+- `OpenClaw` debe seguir siendo la unica UX: el usuario aporta un humanoide ya
+  preparado y solo necesita una accion simple como `Create rig`
+- la entrada obligatoria de la fase es el output `cleaned/remeshed` de la fase
+  `13`, sin abrir otro pipeline paralelo de preparacion
+- `Blender` background Python debe hacer import, activacion de `Rigify`,
+  generacion del rig, asignacion de pesos, validacion y export
+- la validacion automatica debe cubrir al menos: levantar brazos, doblar
+  codos, doblar rodillas, rotar cabeza e inclinar torso
+- la salida debe incluir evidencia revisable y feedback legible para
+  principiantes sin exigir UI de `Blender`
+
+### Planned Breakdown
+- fijar si `Rigify` puro basta para el primer slice o si se necesita un helper
+  libre adicional bien justificado
+- definir el contrato de orquestacion y evidencia del futuro flujo `Create rig`
+  sin abrir una CLI ad hoc paralela
+- definir el script canonico de instalacion o audit de dependencias de
+  rigging, incluyendo `Blender`, disponibilidad o activacion de `Rigify` y
+  cualquier helper libre adicional solo si la decision de la fase lo justifica
+- ejecutar una prueba end-to-end real como gate explicito antes de marcar la
+  fase como `done`
+- fijar criterios de `pass`, `soft_pass_with_fallback`, `fail_quality` y
+  `blocked_*` para rigging humanoide automatico
+
+### Open Tasks
+- [`14.1`](tasks/14.1-blender-rigify-humanoid-rigging-plan.md): definir la
+  ruta gratuita Linux-first, su dependencia del output `cleaned/remeshed` de
+  la fase `13`, la validacion automatica y el reporting beginner-friendly
+- [`14.2`](tasks/14.2-phase14-e2e-proof.md): reservar y ejecutar despues la
+  prueba end-to-end real de la fase `14` como gate de cierre
