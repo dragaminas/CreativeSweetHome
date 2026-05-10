@@ -35,6 +35,14 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser.add_argument("--run-id")
     start_parser.add_argument("--requested-by", default="cli")
     start_parser.add_argument("--channel", default="cli")
+    start_parser.add_argument(
+        "--inputs-json",
+        help="Objeto JSON con inputs estructurados para el runner.",
+    )
+    start_parser.add_argument(
+        "--options-json",
+        help="Objeto JSON con options estructurados para el runner.",
+    )
 
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("runner_id")
@@ -82,6 +90,22 @@ def print_payload(payload: Any, *, as_json: bool) -> None:
     print(serialized)
 
 
+def parse_json_mapping(raw_value: str | None, *, field_name: str) -> dict[str, Any]:
+    if raw_value is None:
+        return {}
+
+    try:
+        payload = json.loads(raw_value)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"{field_name} no contiene JSON valido: {error}") from error
+
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise ValueError(f"{field_name} debe ser un objeto JSON.")
+    return payload
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -117,6 +141,11 @@ def main(argv: list[str] | None = None) -> int:
                 requested_by=args.requested_by,
                 channel=args.channel,
                 run_id=args.run_id,
+                inputs=parse_json_mapping(args.inputs_json, field_name="--inputs-json"),
+                options=parse_json_mapping(
+                    args.options_json,
+                    field_name="--options-json",
+                ),
             )
             payload = runner.start_run(request)
             print_payload(payload, as_json=args.json)

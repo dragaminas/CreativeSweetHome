@@ -34,10 +34,12 @@ _DEFAULT_REGISTRY: RunnerRegistry | None = None
 
 
 def build_default_runner_registry() -> RunnerRegistry:
+    from .blender import BlenderRunner
     from .comfyui import ComfyUIRunner
     from .hunyuan3d import Hunyuan3DRunner
 
     registry = RunnerRegistry()
+    registry.register(BlenderRunner())
     registry.register(ComfyUIRunner())
     registry.register(Hunyuan3DRunner())
     return registry

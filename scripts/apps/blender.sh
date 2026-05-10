@@ -61,7 +61,17 @@ case "$cmd" in
     kv "project_file" "$blend_file"
     kv "render_file" "$render_file"
     ;;
+  pre-rig-cleanup)
+    config_json="${2:-}"
+    helper_py="$SCRIPT_DIR/blender_pre_rig_cleanup.py"
+    [[ -n "$config_json" ]] || die "Debes indicar el archivo JSON de configuracion"
+    [[ -f "$config_json" ]] || die "No existe el archivo de configuracion: $config_json"
+    [[ -x "$BLENDER_BIN" ]] || die "Blender no esta disponible"
+    [[ -f "$helper_py" ]] || die "No existe el helper: $helper_py"
+    "$BLENDER_BIN" --background --factory-startup \
+      --python "$helper_py" -- "$config_json"
+    ;;
   *)
-    die "Uso: $0 [status|new-project <nombre>|open-project <archivo.blend>|smoke-test <nombre>]"
+    die "Uso: $0 [status|new-project <nombre>|open-project <archivo.blend>|smoke-test <nombre>|pre-rig-cleanup <config.json>]"
     ;;
 esac
