@@ -49,6 +49,12 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   smoke test real, siempre que sea tecnicamente posible.
 - Si una smoke validation no es posible o no es barata, la task file debe
   explicarlo de forma explicita en vez de omitirla.
+- Cuando una linea de producto se implemente como pipeline secuencial por
+  fases, cada fase debe declarar explicitamente cual es su validacion upstream
+  habilitante y que artefactos canonicos reutiliza del paso anterior.
+- En una linea secuencial no basta con que la fase anterior exista en planning:
+  el gate minimo para avanzar es que su prueba end-to-end este en `pass` o
+  `soft_pass_with_fallback`, salvo excepcion documentada en la task file.
 - La evidencia debe quedar publicada en una ruta revisable cuando el flujo la
   requiera.
 - La documentacion debe describir comportamiento probado, no comportamiento
@@ -68,6 +74,16 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   infraestructura no debe duplicarse.
 - Cada tarea activa que introduzca o dependa de software externo debe declarar
   como se instala o provisiona desde el repo, o dejar el bloqueo documentado.
+- Cada task file nueva o modificada en un cambio de planning debe incluir una
+  seccion explicita de dependencia, por ejemplo `Dependency Provisioning` o
+  `Planned Dependency Path`.
+- Esa seccion no puede quedarse en prose ambigua: debe nombrar un script del
+  repo ya existente, un script nuevo que la propia tarea debe entregar, una
+  tarea hoja dedicada que lo implementara, o declarar explicitamente que no hay
+  dependencias nuevas y que se reutiliza una ruta canonica ya existente.
+- Toda task file nueva o modificada dentro de una linea secuencial de producto
+  debe incluir una seccion explicita de `Upstream Validation Gate` o
+  equivalente funcional.
 - Cada tarea activa debe incluir una seccion `Canonical Docs to Update`.
 - Si una tarea esta bloqueada, el bloqueo debe quedar explicito y basado en el
   estado real del repo o del entorno.
@@ -79,6 +95,15 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Toda fase con estado `active` o `pending` debe incluir, entre sus tareas
   hoja, una tarea dedicada de prueba end-to-end real de la fase, aunque esa
   prueba quede pendiente para mas adelante.
+- Si una fase introduce una superficie nueva de dependencias, activacion de
+  add-ons, binarios, runtimes o software externo, y esa provision no queda ya
+  resuelta por un script canonico existente, el mismo cambio debe crear una
+  tarea hoja dedicada a `dependency installation/audit`.
+- No es valido dejar la provision de dependencias solo como texto futuro dentro
+  de una task de planning, del phase index o de un prompt temporal.
+- Tampoco es valido considerar suficiente el par `planning + e2e proof` si la
+  ruta de provision de dependencias de la fase sigue sin tarea hoja propia o
+  sin script canonico ya existente.
 - No se considera valido dejar una fase activa solo con texto narrativo o
   placeholders como "desglosar despues"; el desglose minimo debe existir en
   `docs/devplan/tasks/` dentro del mismo cambio.

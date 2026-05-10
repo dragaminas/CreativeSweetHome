@@ -31,6 +31,19 @@ Constraints:
 - keep the result integrated in `docs/devplan/`
 - if Scope is `new phase` or phase-level refinement, always decompose into at
   least one leaf task file under `docs/devplan/tasks/` in the same change
+- if a new or updated task depends on external software, add an explicit
+  `Dependency Provisioning` or `Planned Dependency Path` section
+- that dependency section must name one of:
+  - an existing repo script that already provisions or audits the dependency
+  - a new repo script that the task must deliver
+  - a dedicated leaf task created in the same change to implement that script
+  - an explicit statement that there are no new dependencies and which existing
+    canonical path is reused
+- if Scope is `new phase` or phase-level refinement and dependency
+  provisioning is not already fully covered by an existing repo script, create
+  a dedicated leaf task for dependency installation/audit in the same change
+- do not leave a phase with only planning plus e2e-proof tasks when its
+  dependency-provisioning path is still unresolved
 - do not leave `active` or `pending` phases with placeholder open tasks
 - keep `docs/devplan/feature-map.md` pointing to concrete task files for active
   work
