@@ -34,6 +34,10 @@ if [[ "${HARDEN_OPENCLAW:-true}" == "true" ]]; then
   "$SCRIPT_DIR/../openclaw/configure-openclaw.sh" "$mode"
 fi
 
+if [[ "${OPENCLAW_UI_INSTALL:-false}" == "true" ]]; then
+  "$SCRIPT_DIR/../apps/install-ui-web-deps.sh" "$mode"
+fi
+
 if [[ "${CREATE_STUDIO_DIRS:-true}" == "true" ]]; then
   "$SCRIPT_DIR/../openclaw/setup-workspace.sh" "$mode"
 fi
@@ -53,6 +57,9 @@ fi
 print_header "Integracion creativa"
 if [[ "${PRE_RIG_3D_DEPS_INSTALL:-false}" == "true" ]]; then
   "$SCRIPT_DIR/../apps/install-3d-pre-rig-deps.sh" "$mode"
+fi
+if [[ "${RIGGING_3D_DEPS_INSTALL:-false}" == "true" ]]; then
+  "$SCRIPT_DIR/../apps/install-3d-rigging-deps.sh" "$mode"
 fi
 if [[ "${COMFYUI_INSTALL:-true}" == "true" ]]; then
   "$SCRIPT_DIR/../apps/install-comfyui.sh" "$mode"

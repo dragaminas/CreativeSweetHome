@@ -11,14 +11,17 @@ El repo permite:
 - abrir proyectos existentes
 - ejecutar una smoke test real
 - ejecutar cleanup pre-rig humanoide via runner canonico
+- auditar la base de rigging humanoide con `Rigify`, export y preview render
 - invocar estas acciones desde el plugin seguro de WhatsApp
 
 ## Prueba local rapida
 
 ```bash
 bash scripts/apps/install-3d-pre-rig-deps.sh audit
+bash scripts/apps/install-3d-rigging-deps.sh audit
 scripts/apps/blender.sh status
 scripts/apps/blender.sh smoke-test blender-smoke
+scripts/apps/blender.sh rigging-smoke-test rigging-smoke
 ```
 
 Eso debe generar:
@@ -62,7 +65,38 @@ Si la maquina todavia no tiene las dependencias del flujo, usa:
 ```bash
 bash scripts/apps/install-3d-pre-rig-deps.sh audit
 bash scripts/apps/install-3d-pre-rig-deps.sh apply
+bash scripts/apps/install-3d-rigging-deps.sh audit
+bash scripts/apps/install-3d-rigging-deps.sh apply
 ```
+
+## Smoke de rigging humanoide
+
+La fase `14` reutiliza `Blender` como backend y audita en background:
+
+- disponibilidad de `Rigify`
+- export `glTF/FBX`
+- preview render de una escena minima de rigging
+
+Ruta manual recomendada:
+
+```bash
+bash scripts/apps/install-3d-rigging-deps.sh audit
+scripts/apps/blender.sh rigging-smoke-test rigging-smoke
+```
+
+Por defecto esto publica en:
+
+```text
+$STUDIO_DIR/BlenderProjects/rigging-smoke/
+```
+
+Archivos esperados:
+
+- `rigging-smoke.blend`
+- `rigging-smoke.glb`
+- `rigging-smoke.fbx`
+- `rigging-smoke.png`
+- `rigging-smoke-report.json`
 
 ## Abrir un proyecto existente
 
@@ -107,7 +141,8 @@ Si no escribes la wake word `studio`, no deberia haber respuesta.
 
 1. Ejecutar `scripts/apps/blender.sh status`
 2. Ejecutar `scripts/apps/blender.sh smoke-test blender-smoke`
-3. Ejecutar `scripts/actions/runner-action.sh describe blender`
-4. Ejecutar `scripts/actions/runner-action.sh list-targets blender operate`
-5. Ejecutar `scripts/openclaw/test-studio-actions-plugin.sh "studio como esta blender"`
-6. Confirmar que existen el `.blend` y el `.png`
+3. Ejecutar `scripts/apps/blender.sh rigging-smoke-test rigging-smoke`
+4. Ejecutar `scripts/actions/runner-action.sh describe blender`
+5. Ejecutar `scripts/actions/runner-action.sh list-targets blender operate`
+6. Ejecutar `scripts/openclaw/test-studio-actions-plugin.sh "studio como esta blender"`
+7. Confirmar que existen el `.blend`, el `.png`, el `.glb` y el `.fbx`
