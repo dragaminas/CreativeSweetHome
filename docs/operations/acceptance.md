@@ -16,7 +16,8 @@
 
 ## Incidencias actuales
 
-- queda pendiente retirar a `eric` de `sudo` y `adm` para cumplir el objetivo de usuario no privilegiado
+- queda pendiente crear y migrar el runtime a `openclaw` sin `sudo/adm`; `eric`
+  se mantiene como cuenta administrativa
 
 ## Backlog de mejoras
 

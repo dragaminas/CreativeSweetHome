@@ -20,6 +20,34 @@ scripts/bootstrap/apply-workstation.sh apply
 La idea es converger el sistema a partir de la configuracion declarativa, no
 mantener una lista larga de pasos manuales.
 
+## Modelo recomendado de usuarios
+
+Para hardening, separa cuenta administrativa y cuenta runtime:
+
+- admin: por ejemplo `eric`, puede conservar `sudo` para mantenimiento del host
+- runtime: por ejemplo `openclaw`, sin grupos sensibles como `sudo` o `adm`
+
+Provision minima sugerida (ejecutada desde la cuenta admin):
+
+```bash
+sudo useradd --create-home --shell /bin/bash openclaw
+sudo passwd openclaw
+sudo install -d -m 755 -o openclaw -g openclaw /home/openclaw/Documents
+sudo rsync -a --delete "$PWD"/ /home/openclaw/Documents/OpenClaw/
+sudo chown -R openclaw:openclaw /home/openclaw/Documents/OpenClaw
+```
+
+Luego ejecuta bootstrap como runtime:
+
+```bash
+sudo -iu openclaw
+cd /home/openclaw/Documents/OpenClaw
+cp .env.example .env
+scripts/bootstrap/show-config.sh
+scripts/bootstrap/apply-workstation.sh audit
+scripts/bootstrap/apply-workstation.sh apply
+```
+
 ## Que hace el bootstrap
 
 `scripts/bootstrap/apply-workstation.sh` orquesta:

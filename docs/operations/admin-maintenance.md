@@ -24,4 +24,5 @@ Con `scripts/desktop/install-shortcuts.sh apply` quedan accesos directos en
 - `openclaw-gateway.service` es obligatorio
 - `comfyui.service` es obligatorio para la UX diaria
 - `openclaw-node.service` queda deshabilitado por defecto en este perfil
-- el usuario de runtime no deberia permanecer en `sudo` ni `adm`
+- separar cuentas: admin (por ejemplo `eric`) con `sudo` y runtime dedicado
+  (por ejemplo `openclaw`) sin `sudo` ni `adm`
