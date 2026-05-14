@@ -42,6 +42,7 @@ fuera del flujo normal.
 
 ### Stable Artifacts
 - [`../security/disks-and-automount.md`](../security/disks-and-automount.md)
+- [`../security/runtime-user-hardening.md`](../security/runtime-user-hardening.md)
 - [`../../scripts/hardening/check-user.sh`](../../scripts/hardening/check-user.sh)
 - [`../../scripts/hardening/check-mounts.sh`](../../scripts/hardening/check-mounts.sh)
 
@@ -458,7 +459,7 @@ pueden servir solo como comparativa, no como ruta core.
 ## Phase 15: Producto UI web con SvelteKit y workspaces embebidos
 
 ### Status
-`active`
+`done`
 
 ### Purpose
 Convertir la UI web en la experiencia principal del producto sin duplicar el
@@ -486,8 +487,7 @@ internas como experiencia primaria.
 - feedback reutilizable de progreso, cancelacion, evidencia y errores legibles
 
 ### Open Tasks
-- [`15.2`](tasks/15.2-phase15-e2e-proof.md): ejecutar la prueba end-to-end
-  real del shell web y su puente con el contrato canonico
+- Ninguna
 
 ## Phase 16: Descripcion de escena en UI
 

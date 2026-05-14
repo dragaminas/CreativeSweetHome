@@ -56,7 +56,7 @@ Para no abrir una arquitectura paralela:
 - la capa de traduccion de prompts se vuelve infraestructura compartida de la
   UI, no logica ad hoc por workflow
 
-## Snapshot implementado en `15.1`
+## Snapshot implementado en `15.1` y validado en `15.2`
 
 La implementacion actual del shell ya deja materializadas estas fronteras:
 
@@ -78,6 +78,21 @@ mediante rutas servidoras compartidas:
 - `GET /api/runs/[runnerId]/[runId]`
 - `POST /api/runs/[runnerId]/[runId]/cancel`
 - `POST /api/briefs`
+- `POST /api/briefs/scene`
+
+Para `UX-01` (phase `16`) la captura guiada persiste el brief en una ruta
+revisable y filesystem-first bajo:
+
+- `STUDIO_DIR/Scenes/<project_id>/<scene_id>/briefs/scene-brief.json`
+
+La prueba browser-backed de `15.2` confirma en maquina real que el shell
+arranca, navega y consume el contrato canonico sobre estas superficies:
+
+- `/`
+- `/workspaces/comfyui`
+- `/workspaces/kimodo`
+- `/workspaces/kimodo/embed`
+- `/api/runners`
 
 Eso mantiene el shell sobre la CLI y el registro canonicos del repo, sin crear
 un runner HTTP paralelo.

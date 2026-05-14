@@ -20,10 +20,20 @@ test.describe('phase15-shell', () => {
       'comfyui'
     );
 
+    await expect(page.getByTestId('runner-contract-path')).toBeVisible();
+    await expect(page.getByTestId('runner-contract-path')).toContainText(
+      'runner-interface.md'
+    );
+
+    await page.getByRole('link', { name: 'ComfyUI engine' }).first().click();
+    await expect(page.getByRole('heading', { name: 'ComfyUI', exact: true })).toBeVisible();
+    await expect(page.getByText('runner_id').first()).toBeVisible();
+    await expect(page.getByText('comfyui').first()).toBeVisible();
+
     await page.getByRole('link', { name: 'Kimodo' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Kimodo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Kimodo', exact: true })).toBeVisible();
 
     const frame = page.frameLocator('iframe[title="Kimodo embedded workspace seam"]');
-    await expect(frame.getByText('Kimodo embed seam')).toBeVisible();
+    await expect(frame.getByRole('heading', { name: 'Kimodo embed seam', exact: true })).toBeVisible();
   });
 });

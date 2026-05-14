@@ -35,7 +35,9 @@
           label={data.runnerCatalog.bridge.label}
           tone={data.runnerCatalog.bridge.tone}
         />
-        <span class="code-chip">{data.studio.runnerContractPath}</span>
+        <span class="code-chip" data-testid="runner-contract-path">
+          {data.studio.runnerContractPath}
+        </span>
       </div>
     </header>
 
