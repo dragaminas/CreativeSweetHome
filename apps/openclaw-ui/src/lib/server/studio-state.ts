@@ -39,12 +39,19 @@ export async function loadStudioState(): Promise<StudioState> {
       'architecture',
       'runner-interface.md'
     ),
+    sceneRootPath: path.join(context.studioDir, 'Scenes'),
     directories: await Promise.all([
       directoryStatus(
         'studio-root',
         'Studio root',
         context.studioDir,
         'Raiz filesystem-first del producto.'
+      ),
+      directoryStatus(
+        'scenes',
+        'Scenes',
+        path.join(context.studioDir, 'Scenes'),
+        'Raiz canonica para briefs, scaffold y manifiestos de escena.'
       ),
       directoryStatus(
         'assets3d',

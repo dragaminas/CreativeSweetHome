@@ -3,7 +3,9 @@
   import type {
     BadgeTone,
     SceneBriefApiResponse,
-    SceneBriefCheckpointStatus
+    SceneBriefCheckpointStatus,
+    SceneStorageApiResponse,
+    SceneStorageScaffoldStatus
   } from '$lib/types/product';
 
   export let data;
@@ -24,6 +26,21 @@
   let submitting = false;
   let submitError = '';
   let result: SceneBriefApiResponse | null = null;
+
+  interface SceneScaffoldFormState {
+    projectId: string;
+    sceneId: string;
+    initialShotId: string;
+  }
+
+  let scaffoldForm: SceneScaffoldFormState = {
+    projectId: data.sceneFormDefaults.projectId,
+    sceneId: data.sceneFormDefaults.sceneId,
+    initialShotId: 'sh010'
+  };
+  let scaffoldSubmitting = false;
+  let scaffoldError = '';
+  let scaffoldResult: SceneStorageApiResponse | null = null;
 
   function checkpointTone(status: SceneBriefCheckpointStatus | 'fail_compile' | 'fail_runtime'): BadgeTone {
     if (status === 'accepted') {
@@ -60,6 +77,47 @@
       result = null;
     } finally {
       submitting = false;
+    }
+  }
+
+  function scaffoldTone(
+    status: SceneStorageScaffoldStatus | 'fail_compile' | 'fail_runtime'
+  ): BadgeTone {
+    if (status === 'created') {
+      return 'positive';
+    }
+
+    if (status === 'collision') {
+      return 'info';
+    }
+
+    return 'warning';
+  }
+
+  async function submitSceneScaffold(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    scaffoldSubmitting = true;
+    scaffoldError = '';
+
+    try {
+      const response = await fetch('/api/scenes/scaffold', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(scaffoldForm)
+      });
+
+      const payload = (await response.json()) as SceneStorageApiResponse;
+      scaffoldResult = payload;
+
+      if (!response.ok) {
+        scaffoldError = payload.message;
+      }
+    } catch (error) {
+      scaffoldError =
+        error instanceof Error ? error.message : 'No fue posible crear el scene scaffold.';
+      scaffoldResult = null;
+    } finally {
+      scaffoldSubmitting = false;
     }
   }
 </script>
@@ -239,6 +297,131 @@
           Cuando envies el formulario veras el estado <code>accepted</code>,
           <code>incomplete</code> o <code>ambiguous</code> junto con la ruta persistida del
           brief.
+        </p>
+      {/if}
+    </article>
+  </section>
+
+  <section class="grid two">
+    <article class="panel fade-in">
+      <h3>Scene storage scaffold</h3>
+      <p class="muted">
+        Genera el scaffold canonico <code>scene -&gt; assets -&gt; shots -&gt; exports</code> a
+        partir del <code>scene brief</code> ya persistido.
+      </p>
+
+      <form class="scene-brief-form" on:submit={submitSceneScaffold}>
+        <div class="form-grid two-up">
+          <label>
+            Project ID
+            <input
+              data-testid="scene-scaffold-project-id"
+              bind:value={scaffoldForm.projectId}
+              name="projectId"
+              placeholder="pilot-feature"
+              required
+            />
+          </label>
+
+          <label>
+            Scene ID
+            <input
+              data-testid="scene-scaffold-scene-id"
+              bind:value={scaffoldForm.sceneId}
+              name="sceneId"
+              placeholder="opening-alley"
+              required
+            />
+          </label>
+        </div>
+
+        <label>
+          Initial Shot ID
+          <input
+            data-testid="scene-scaffold-shot-id"
+            bind:value={scaffoldForm.initialShotId}
+            name="initialShotId"
+            placeholder="sh010"
+            required
+          />
+        </label>
+
+        <button data-testid="scene-scaffold-submit" type="submit" disabled={scaffoldSubmitting}>
+          {scaffoldSubmitting ? 'Scaffolding scene...' : 'Create scene scaffold'}
+        </button>
+      </form>
+    </article>
+
+    <article class="panel fade-in">
+      <h3>Scaffold feedback</h3>
+
+      {#if scaffoldError}
+        <p class="muted">{scaffoldError}</p>
+      {/if}
+
+      {#if scaffoldResult}
+        <div class="panel-stack" data-testid="scene-scaffold-feedback">
+          <div class="inline-meta">
+            <StatusBadge
+              label={scaffoldResult.accepted ? 'created' : 'needs review'}
+              tone={scaffoldTone(scaffoldResult.status)}
+            />
+            <span class="code-chip" data-testid="scene-scaffold-status">{scaffoldResult.status}</span>
+          </div>
+
+          <p class="muted">{scaffoldResult.message}</p>
+
+          {#if scaffoldResult.scaffold}
+            <div class="data-grid">
+              <div class="kv">
+                <dt>Scene Root</dt>
+                <dd>{scaffoldResult.scaffold.sceneRoot}</dd>
+              </div>
+              <div class="kv">
+                <dt>Assets Root</dt>
+                <dd>{scaffoldResult.scaffold.assetsRoot}</dd>
+              </div>
+              <div class="kv">
+                <dt>Exports Root</dt>
+                <dd>{scaffoldResult.scaffold.exportRoot}</dd>
+              </div>
+              <div class="kv">
+                <dt>Brief Source</dt>
+                <dd>{scaffoldResult.scaffold.briefPath}</dd>
+              </div>
+            </div>
+
+            {#if scaffoldResult.scaffold.createdPaths.length}
+              <div class="kv">
+                <dt>Created paths</dt>
+                <dd>
+                  <ul class="list">
+                    {#each scaffoldResult.scaffold.createdPaths as createdPath, createdIndex (`created-path:${createdIndex}`)}
+                      <li>{createdPath}</li>
+                    {/each}
+                  </ul>
+                </dd>
+              </div>
+            {/if}
+
+            {#if scaffoldResult.scaffold.collisionPaths.length}
+              <div class="kv">
+                <dt>Collisions</dt>
+                <dd>
+                  <ul class="list">
+                    {#each scaffoldResult.scaffold.collisionPaths as collisionPath, collisionIndex (`collision-path:${collisionIndex}`)}
+                      <li>{collisionPath}</li>
+                    {/each}
+                  </ul>
+                </dd>
+              </div>
+            {/if}
+          {/if}
+        </div>
+      {:else}
+        <p class="muted">
+          El scaffold requiere un <code>scene brief</code> existente y reporta rutas creadas o
+          colisiones en tiempo real.
         </p>
       {/if}
     </article>

@@ -116,3 +116,92 @@ test.describe('phase16-scene-brief', () => {
     ]);
   });
 });
+
+test.describe('phase17-scaffold', () => {
+  test('creates the canonical scene storage scaffold from the scene workspace', async ({
+    page
+  }) => {
+    const projectId = `phase17-proof-${Date.now()}`;
+    const sceneId = 'opening-alley';
+    const shotId = 'sh010';
+    const expectedSceneManifestPath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      projectId,
+      sceneId,
+      'manifests',
+      'scene-storage.json'
+    );
+    const expectedShotManifestPath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      projectId,
+      sceneId,
+      'shots',
+      shotId,
+      'manifests',
+      'shot.json'
+    );
+
+    await page.goto('/workspaces/scene');
+
+    await page.getByTestId('scene-brief-project-id').fill(projectId);
+    await page.getByTestId('scene-brief-scene-id').fill(sceneId);
+    await page
+      .getByTestId('scene-brief-intent')
+      .fill('Abrir la historia con una persecucion corta.');
+    await page
+      .getByTestId('scene-brief-tone')
+      .fill('Nocturno, artesanal y cinematografico.');
+    await page.getByTestId('scene-brief-narrative').fill(
+      'Una piloto adolescente cruza un callejon lluvioso mientras un dron casero la sigue de cerca.'
+    );
+    await page.getByTestId('scene-brief-characters').fill('Nora\ndron casero');
+    await page.getByTestId('scene-brief-objects').fill('moto electrica\nneones');
+    await page
+      .getByTestId('scene-brief-constraints')
+      .fill('clip corto\ncontinuidad entre personaje y dron');
+
+    await page.getByTestId('scene-brief-submit').click();
+    await expect(page.getByTestId('scene-brief-checkpoint-status')).toContainText('accepted');
+
+    await page.getByTestId('scene-scaffold-project-id').fill(projectId);
+    await page.getByTestId('scene-scaffold-scene-id').fill(sceneId);
+    await page.getByTestId('scene-scaffold-shot-id').fill(shotId);
+    await page.getByTestId('scene-scaffold-submit').click();
+
+    await expect(page.getByTestId('scene-scaffold-status')).toContainText('created');
+    await expect(page.getByTestId('scene-scaffold-feedback')).toContainText('/Scenes/');
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedSceneManifestPath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedShotManifestPath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
+
+    const sceneManifest = JSON.parse(await fs.readFile(expectedSceneManifestPath, 'utf8')) as {
+      projectId: string;
+      sceneId: string;
+      initialShotId: string;
+    };
+    expect(sceneManifest.projectId).toBe(projectId);
+    expect(sceneManifest.sceneId).toBe(sceneId);
+    expect(sceneManifest.initialShotId).toBe(shotId);
+  });
+});

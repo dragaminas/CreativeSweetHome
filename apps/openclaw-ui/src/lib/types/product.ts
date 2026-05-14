@@ -54,6 +54,7 @@ export interface DirectoryStatus {
 export interface StudioState {
   repoRoot: string;
   runnerContractPath: string;
+  sceneRootPath: string;
   directories: DirectoryStatus[];
 }
 
@@ -155,6 +156,30 @@ export interface SceneBriefApiResponse {
   message: string;
   artifact?: SceneBriefArtifact;
   filePath?: string;
+}
+
+export type SceneStorageScaffoldStatus = 'created' | 'collision' | 'missing_prerequisites';
+
+export interface SceneStorageScaffold {
+  status: SceneStorageScaffoldStatus;
+  message: string;
+  projectId: string;
+  sceneId: string;
+  initialShotId: string;
+  briefPath: string;
+  sceneRoot: string;
+  assetsRoot: string;
+  exportRoot: string;
+  createdPaths: string[];
+  collisionPaths: string[];
+  manifestPaths: string[];
+}
+
+export interface SceneStorageApiResponse {
+  accepted: boolean;
+  status: SceneStorageScaffoldStatus | 'fail_compile' | 'fail_runtime';
+  message: string;
+  scaffold?: SceneStorageScaffold;
 }
 
 export interface StartRunPayload {

@@ -21,10 +21,11 @@ for dir in "$STUDIO_DIR"; do
 done
 
 for dir in \
-  "$STUDIO_DIR/BlenderProjects" \
+  "$OPENCLAW_ALLOWED_BLENDER_PROJECTS_DIR" \
   "$STUDIO_DIR/ComfyUI" \
   "$STUDIO_DIR/Exports" \
-  "$STUDIO_DIR/Assets" \
+  "$OPENCLAW_ALLOWED_3D_ASSETS_DIR" \
+  "$STUDIO_DIR/Scenes" \
   "$STUDIO_DIR/Downloads"; do
   if [[ "$mode" == "apply" ]]; then
     mkdir -p "$dir"

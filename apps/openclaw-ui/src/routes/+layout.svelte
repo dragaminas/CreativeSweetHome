@@ -38,6 +38,9 @@
         <span class="code-chip" data-testid="runner-contract-path">
           {data.studio.runnerContractPath}
         </span>
+        <span class="code-chip" data-testid="scene-root-path">
+          {data.studio.sceneRootPath}
+        </span>
       </div>
     </header>
 
