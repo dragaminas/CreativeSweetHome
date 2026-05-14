@@ -84,6 +84,8 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Toda task file nueva o modificada dentro de una linea secuencial de producto
   debe incluir una seccion explicita de `Upstream Validation Gate` o
   equivalente funcional.
+- Cada tarea activa debe incluir una seccion `Canonical Task Index Reference`
+  apuntando a `docs/devplan/task-status-index.md`.
 - Cada tarea activa debe incluir una seccion `Canonical Docs to Update`.
 - Si una tarea esta bloqueada, el bloqueo debe quedar explicito y basado en el
   estado real del repo o del entorno.
@@ -98,6 +100,7 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   - `## Execution Header`
   - `## Phase`
   - `## Status`
+  - `## Canonical Task Index Reference`
   - `## Goal`
   - `## Minimal Context`
   - `## Files to Inspect First`
@@ -115,6 +118,8 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   en este documento.
 - Toda task file nueva o modificada dentro de una linea secuencial de producto
   debe incluir `## Upstream Validation Gate`.
+- Toda task file debe mantener referencia explicita a
+  `docs/devplan/task-status-index.md`.
 - `Files to Inspect First` y `Deliverables` deben usar rutas de archivo
   concretas siempre que sea posible; evitar rutas de directorio amplias cuando
   impidan la autocontencion de la tarea.

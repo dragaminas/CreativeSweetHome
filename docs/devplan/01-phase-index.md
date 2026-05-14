@@ -3,6 +3,9 @@
 Plantillas para abrir nuevas fases o tareas:
 [prompt-templates.md](prompt-templates.md)
 
+Indice canonico de estado por tarea:
+[task-status-index.md](task-status-index.md)
+
 ## Phase 0: Fundacion del repo
 
 ### Status
@@ -492,7 +495,7 @@ internas como experiencia primaria.
 ## Phase 16: Descripcion de escena en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Abrir la entrada principal del pipeline como una experiencia guiada para
@@ -512,12 +515,12 @@ humana antes de derivarla a consumidores finales.
 - workspace guiado de `scene brief`
 - contrato canonico `scene brief -> translated consumer inputs`
 - checkpoints de feedback legible para brief aceptado, incompleto o ambiguo
+- prueba browser-backed `phase16-scene-brief` sobre `tests/e2e/shell.spec.ts`
+  con persistencia real en `STUDIO_DIR/Scenes/.../briefs/scene-brief.json`
 
 ### Open Tasks
 - [`16.1`](tasks/16.1-ui-scene-description-workspace.md): implementar la
   captura guiada y la traduccion inicial del brief de escena
-- [`16.2`](tasks/16.2-phase16-e2e-proof.md): probar la captura real de una
-  escena y su persistencia canonica
 
 ## Phase 17: Estructura automatizada de almacenamiento de escena
 

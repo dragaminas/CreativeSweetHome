@@ -25,6 +25,9 @@ Phase <N>: <nombre de fase>
 ## Status
 `pending`
 
+## Canonical Task Index Reference
+- `docs/devplan/task-status-index.md`
+
 ## Goal
 <1-3 lineas con el resultado concreto>
 
@@ -63,6 +66,7 @@ Phase <N>: <nombre de fase>
 ## Canonical Docs to Update
 - `docs/devplan/01-phase-index.md`
 - `docs/devplan/feature-map.md`
+- `docs/devplan/task-status-index.md`
 - `docs/devplan/tasks/<phase.task>-<slug>.md`
 - `<otro doc canonico si aplica>`
 
