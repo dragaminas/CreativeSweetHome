@@ -88,6 +88,46 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Si una tarea esta bloqueada, el bloqueo debe quedar explicito y basado en el
   estado real del repo o del entorno.
 
+## Invariantes del template de tareas
+
+- La plantilla canonica para nuevas tareas vive en
+  `docs/devplan/task-template.md`.
+- Toda task file debe conservar, como minimo, las secciones obligatorias del
+  validador mecanico:
+  - `# Task ...`
+  - `## Execution Header`
+  - `## Phase`
+  - `## Status`
+  - `## Goal`
+  - `## Minimal Context`
+  - `## Files to Inspect First`
+  - `## Existing Infrastructure to Reuse`
+  - `## Do Not Create`
+  - `## Required Change`
+  - `## Deliverables`
+  - `## Canonical Docs to Update`
+  - `## Verification`
+  - `## Expected Evidence`
+  - `## Acceptance Criteria`
+- Cada task file nueva o modificada debe incluir una seccion explicita de
+  dependencia (`Dependency Provisioning`, `Dependency Path` o
+  `Planned Dependency Path`) siguiendo las reglas de dependencia ya definidas
+  en este documento.
+- Toda task file nueva o modificada dentro de una linea secuencial de producto
+  debe incluir `## Upstream Validation Gate`.
+- `Files to Inspect First` y `Deliverables` deben usar rutas de archivo
+  concretas siempre que sea posible; evitar rutas de directorio amplias cuando
+  impidan la autocontencion de la tarea.
+- Evitar lenguaje ambiguo en secciones ejecutables de la tarea:
+  - "any ..."
+  - "chosen by the implementation"
+  - "updates under ..."
+  - "minimal docs updates ..."
+- `Verification` debe listar comandos concretos para static checks, unit tests
+  y smoke/integration segun aplique.
+- `Expected Evidence` debe declarar salida esperada, evidencia/log esperado y
+  estado esperado de forma revisable.
+
 ## Reglas de descomposicion de fases
 
 - Toda fase con estado `active` o `pending` debe tener al menos una tarea hoja

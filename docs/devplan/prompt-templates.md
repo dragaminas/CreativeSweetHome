@@ -1,5 +1,8 @@
 # Prompt Template
 
+Plantilla simple para task files:
+[task-template.md](task-template.md)
+
 ```text
 You are working in the existing repository.
 
