@@ -79,6 +79,7 @@ mediante rutas servidoras compartidas:
 - `POST /api/runs/[runnerId]/[runId]/cancel`
 - `POST /api/briefs`
 - `POST /api/briefs/scene`
+- `POST /api/scenes/scaffold`
 
 Para `UX-01` (phase `16`) la captura guiada persiste el brief en una ruta
 revisable y filesystem-first bajo:
@@ -88,6 +89,21 @@ revisable y filesystem-first bajo:
 La prueba browser-backed de `16.2` valida la captura real y persistencia de
 esa ruta desde el flujo canonico en `tests/e2e/shell.spec.ts` (`phase16-scene-brief`),
 incluyendo `workspace` de escena y `POST /api/briefs/scene`.
+
+Para `UX-02` (phase `17`) el shell ahora crea el scaffold canonico desde el
+brief guardado en:
+
+- `POST /api/scenes/scaffold`
+- `STUDIO_DIR/Scenes/<project_id>/<scene_id>/manifests/scene-storage.json`
+- `STUDIO_DIR/Scenes/<project_id>/<scene_id>/manifests/assets.json`
+- `STUDIO_DIR/Scenes/<project_id>/<scene_id>/shots/<shot_id>/manifests/shot.json`
+
+La misma accion crea estructura reusable para fases siguientes, reusando
+`Assets3D/` y `Exports/` sin abrir una raiz paralela:
+
+- `STUDIO_DIR/Scenes/<project_id>/<scene_id>/assets/{characters,objects}/`
+- `STUDIO_DIR/Assets3D/<project_id>/`
+- `STUDIO_DIR/Exports/<project_id>/<shot_id>/{blender,comfyui}/...`
 
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:

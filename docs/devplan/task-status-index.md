@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `74`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `10`
-- `pending`: `53`
+- `done`: `11`
+- `pending`: `52`
 
 ## Tasks
 
@@ -43,7 +43,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `15.2` Prueba end-to-end de Phase 15 | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.2-phase15-e2e-proof.md](docs/devplan/tasks/15.2-phase15-e2e-proof.md) |
 | `16.1` Workspace UI de descripcion de escena | `16` Descripcion de escena en UI | `pending` | [docs/devplan/tasks/16.1-ui-scene-description-workspace.md](docs/devplan/tasks/16.1-ui-scene-description-workspace.md) |
 | `16.2` Prueba end-to-end de Phase 16 | `16` Descripcion de escena en UI | `done` | [docs/devplan/tasks/16.2-phase16-e2e-proof.md](docs/devplan/tasks/16.2-phase16-e2e-proof.md) |
-| `17.1` Scaffolding UI de almacenamiento de escena | `17` Estructura automatizada de almacenamiento de escena | `pending` | [docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md](docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md) |
+| `17.1` Scaffolding UI de almacenamiento de escena | `17` Estructura automatizada de almacenamiento de escena | `done` | [docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md](docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md) |
 | `17.2` Prueba end-to-end de Phase 17 | `17` Estructura automatizada de almacenamiento de escena | `pending` | [docs/devplan/tasks/17.2-phase17-e2e-proof.md](docs/devplan/tasks/17.2-phase17-e2e-proof.md) |
 | `18.1` Catalogo UI de assets | `18` Catalogacion de assets en UI | `pending` | [docs/devplan/tasks/18.1-ui-asset-catalog.md](docs/devplan/tasks/18.1-ui-asset-catalog.md) |
 | `18.2` Prueba end-to-end de Phase 18 | `18` Catalogacion de assets en UI | `pending` | [docs/devplan/tasks/18.2-phase18-e2e-proof.md](docs/devplan/tasks/18.2-phase18-e2e-proof.md) |

@@ -545,10 +545,14 @@ reproducible desde una accion de producto.
 - scaffold canonico `scene -> assets -> shots -> exports`
 - manifiestos iniciales de escena y shot
 - feedback de creacion y colisiones de estructura
+- ruta canonica `POST /api/scenes/scaffold`
+- manifests base:
+  `Scenes/<project>/<scene>/manifests/scene-storage.json`,
+  `Scenes/<project>/<scene>/manifests/assets.json`,
+  `Scenes/<project>/<scene>/shots/<shot>/manifests/shot.json`
+- estructura de handoff inicial para `Exports/<project>/<shot>/{blender,comfyui}`
 
 ### Open Tasks
-- [`17.1`](tasks/17.1-ui-scene-storage-scaffolding.md): implementar el
-  scaffolding automatizado de escena y shot sobre `STUDIO_DIR`
 - [`17.2`](tasks/17.2-phase17-e2e-proof.md): probar la creacion real de una
   estructura de escena revisable
 
