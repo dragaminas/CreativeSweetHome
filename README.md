@@ -132,5 +132,107 @@ scripts/actions/runner-action.sh describe comfyui
 └── src/
 ```
 
+## Arrancar llama.cpp
+
+### Crea scripts si no existen aun
+
+```bash 
+cat > ~/start-qwen36-llamacpp.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# llama.cpp TurboQuant server launcher for Qwen3.6-35B-A3B on RTX 3090.
+
+LLAMA_SERVER="${LLAMA_SERVER:-$HOME/llama-cpp-turboquant/build/bin/llama-server}"
+MODEL_PATH="${MODEL_PATH:-$HOME/models/qwen3.6-35b-a3b/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf}"
+HOST="${HOST:-127.0.0.1}"
+PORT="${PORT:-8081}"
+CTX_SIZE="${CTX_SIZE:-32768}"
+N_CPU_MOE="${N_CPU_MOE:-35}"
+
+exec "$LLAMA_SERVER" \
+  --model "$MODEL_PATH" \
+  --host "$HOST" \
+  --port "$PORT" \
+  --n-gpu-layers 999 \
+  --n-cpu-moe "$N_CPU_MOE" \
+  --ctx-size "$CTX_SIZE" \
+  --flash-attn on \
+  --no-mmap \
+  --mlock \
+  --cache-type-k turbo4 \
+  --cache-type-v turbo3 \
+  --jinja
+EOF
+
+chmod +x ~/start-qwen36-llamacpp.sh
+```
+
+```bash
+cat > ~/start-llamacpp-model.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Generic llama.cpp TurboQuant endpoint launcher.
+# Override values from the command line:
+# MODEL_PATH=/path/model.gguf PORT=8082 CTX_SIZE=32768 N_CPU_MOE=35 ~/start-llamacpp-model.sh
+
+LLAMA_SERVER="${LLAMA_SERVER:-$HOME/llama-cpp-turboquant/build/bin/llama-server}"
+
+MODEL_PATH="${MODEL_PATH:?Set MODEL_PATH=/path/to/model.gguf}"
+HOST="${HOST:-127.0.0.1}"
+PORT="${PORT:-8081}"
+CTX_SIZE="${CTX_SIZE:-32768}"
+N_CPU_MOE="${N_CPU_MOE:-35}"
+GPU_LAYERS="${GPU_LAYERS:-999}"
+
+exec "$LLAMA_SERVER" \
+  --model "$MODEL_PATH" \
+  --host "$HOST" \
+  --port "$PORT" \
+  --n-gpu-layers "$GPU_LAYERS" \
+  --n-cpu-moe "$N_CPU_MOE" \
+  --ctx-size "$CTX_SIZE" \
+  --flash-attn on \
+  --no-mmap \
+  --mlock \
+  --cache-type-k turbo4 \
+  --cache-type-v turbo3 \
+  --jinja
+EOF
+
+chmod +x ~/start-llamacpp-model.sh
+```
+
+### Lanzar start-qwen36
+
+```bash
+~/start-qwen36-llamacpp.sh
+```
+Arrancar en otros puertos o context size
+
+```bash
+PORT=8082 CTX_SIZE=65536 ~/start-qwen36-llamacpp.sh
+```
+### Lanzar llama definiendo modelo
+
+```bash
+MODEL_PATH="$HOME/models/qwen3.6-35b-a3b/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf" \
+PORT=8081 \
+CTX_SIZE=32768 \
+N_CPU_MOE=35 \
+~/start-llamacpp-model.sh
+```
+
+```bash
+MODEL_PATH="$HOME/models/qwen3-coder-next/Qwen3-Coder-Next-UD-Q4_K_M.gguf" \
+PORT=8082 \
+CTX_SIZE=32768 \
+N_CPU_MOE=35 \
+~/start-llamacpp-model.sh
+```
+
+
+
 `SAD.md` y `DevPlan.md` en la raiz existen solo como puntos de compatibilidad.
 Las fuentes canonicas viven en `docs/SAD.md` y `docs/devplan/`.
