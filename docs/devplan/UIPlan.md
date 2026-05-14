@@ -85,6 +85,10 @@ revisable y filesystem-first bajo:
 
 - `STUDIO_DIR/Scenes/<project_id>/<scene_id>/briefs/scene-brief.json`
 
+La prueba browser-backed de `16.2` valida la captura real y persistencia de
+esa ruta desde el flujo canonico en `tests/e2e/shell.spec.ts` (`phase16-scene-brief`),
+incluyendo `workspace` de escena y `POST /api/briefs/scene`.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

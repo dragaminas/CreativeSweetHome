@@ -168,6 +168,7 @@
         <label>
           References (opcional)
           <textarea
+            data-testid="scene-brief-references"
             bind:value={form.references}
             name="references"
             rows="2"
