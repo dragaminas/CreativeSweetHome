@@ -410,6 +410,56 @@ textarea {
   gap: 0.8rem;
 }
 
+.scene-brief-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.scene-brief-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.form-grid.two-up {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scene-brief-form input,
+.scene-brief-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.62rem 0.72rem;
+  color: var(--ink);
+}
+
+.scene-brief-form textarea {
+  resize: vertical;
+}
+
+.scene-brief-form button {
+  border: 1px solid rgba(13, 107, 95, 0.25);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  padding: 0.72rem 0.92rem;
+  cursor: pointer;
+}
+
+.scene-brief-form button[disabled] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .fade-in {
   animation: rise-in 420ms ease both;
 }
@@ -438,7 +488,8 @@ textarea {
 
   .grid.two,
   .grid.three,
-  .data-grid {
+  .data-grid,
+  .form-grid.two-up {
     grid-template-columns: 1fr;
   }
 
