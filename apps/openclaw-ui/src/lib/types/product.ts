@@ -119,6 +119,44 @@ export interface SharedBrief {
   consumerBriefs: ConsumerBrief[];
 }
 
+export type SceneBriefCheckpointStatus = 'accepted' | 'incomplete' | 'ambiguous';
+
+export interface SceneBriefSourceFields {
+  intent: string;
+  tone: string;
+  narrative: string;
+  characters: string[];
+  objects: string[];
+  constraints: string[];
+  references: string[];
+}
+
+export interface SceneBriefCheckpoint {
+  status: SceneBriefCheckpointStatus;
+  label: string;
+  notes: string[];
+}
+
+export interface SceneBriefArtifact {
+  schemaVersion: 1;
+  createdAt: string;
+  briefId: string;
+  projectId: string;
+  sceneId: string;
+  workspaceId: 'scene';
+  source: SceneBriefSourceFields;
+  checkpoint: SceneBriefCheckpoint;
+  sharedBrief: SharedBrief;
+}
+
+export interface SceneBriefApiResponse {
+  accepted: boolean;
+  status: SceneBriefCheckpointStatus | 'fail_compile' | 'fail_runtime';
+  message: string;
+  artifact?: SceneBriefArtifact;
+  filePath?: string;
+}
+
 export interface StartRunPayload {
   runner_id: string;
   operation_kind: string;
