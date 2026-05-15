@@ -225,7 +225,7 @@ N_CPU_MOE=35 \
 ```
 
 ```bash
-MODEL_PATH="$HOME/models/qwen3-coder-next/Qwen3-Coder-Next-UD-Q4_K_M.gguf" \
+MODEL_PATH="$HOME/models/qwen3-coder-next/Qwen3-Coder-Next-UD-Q3_K_XL.gguf" \
 PORT=8082 \
 CTX_SIZE=32768 \
 N_CPU_MOE=35 \

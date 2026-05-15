@@ -1,4 +1,4 @@
-from openclaw_studio.utils import camel_to_snake, snake_to_camel
+from docs.devplan.llama_model_experiment.utils_36 import camel_to_snake, snake_to_camel
 
 
 def test_simple_camel_case():
