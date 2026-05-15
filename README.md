@@ -232,6 +232,14 @@ N_CPU_MOE=35 \
 ~/start-llamacpp-model.sh
 ```
 
+```bash
+MODEL_PATH="$HOME/models/qwen3.6-35b-a3b-q8/Qwen3.6-35B-A3B-Q8_0.gguf" \
+PORT=8082 \
+CTX_SIZE=262144 \
+N_CPU_MOE=35 \
+~/start-llamacpp-model.sh
+```
+
 
 
 `SAD.md` y `DevPlan.md` en la raiz existen solo como puntos de compatibilidad.
