@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `74`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `11`
-- `pending`: `52`
+- `done`: `12`
+- `pending`: `51`
 
 ## Tasks
 
@@ -44,7 +44,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `16.1` Workspace UI de descripcion de escena | `16` Descripcion de escena en UI | `pending` | [docs/devplan/tasks/16.1-ui-scene-description-workspace.md](docs/devplan/tasks/16.1-ui-scene-description-workspace.md) |
 | `16.2` Prueba end-to-end de Phase 16 | `16` Descripcion de escena en UI | `done` | [docs/devplan/tasks/16.2-phase16-e2e-proof.md](docs/devplan/tasks/16.2-phase16-e2e-proof.md) |
 | `17.1` Scaffolding UI de almacenamiento de escena | `17` Estructura automatizada de almacenamiento de escena | `done` | [docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md](docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md) |
-| `17.2` Prueba end-to-end de Phase 17 | `17` Estructura automatizada de almacenamiento de escena | `pending` | [docs/devplan/tasks/17.2-phase17-e2e-proof.md](docs/devplan/tasks/17.2-phase17-e2e-proof.md) |
+| `17.2` Prueba end-to-end de Phase 17 | `17` Estructura automatizada de almacenamiento de escena | `done` | [docs/devplan/tasks/17.2-phase17-e2e-proof.md](docs/devplan/tasks/17.2-phase17-e2e-proof.md) |
 | `18.1` Catalogo UI de assets | `18` Catalogacion de assets en UI | `pending` | [docs/devplan/tasks/18.1-ui-asset-catalog.md](docs/devplan/tasks/18.1-ui-asset-catalog.md) |
 | `18.2` Prueba end-to-end de Phase 18 | `18` Catalogacion de assets en UI | `pending` | [docs/devplan/tasks/18.2-phase18-e2e-proof.md](docs/devplan/tasks/18.2-phase18-e2e-proof.md) |
 | `19.0` Backend canonico de referencias de assets en ComfyUI | `19` Referencias de assets con ComfyUI encapsulado | `pending` | [docs/devplan/tasks/19.0-backend-comfyui-asset-reference-operation.md](docs/devplan/tasks/19.0-backend-comfyui-asset-reference-operation.md) |

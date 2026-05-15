@@ -105,6 +105,11 @@ La misma accion crea estructura reusable para fases siguientes, reusando
 - `STUDIO_DIR/Assets3D/<project_id>/`
 - `STUDIO_DIR/Exports/<project_id>/<shot_id>/{blender,comfyui}/...`
 
+La prueba browser-backed de `17.2` valida este flujo desde
+`/workspaces/scene` y `POST /api/scenes/scaffold`, comprobando en disco la
+creacion real de `scene-storage.json`, `assets.json`, `shot.json` y la
+estructura de `Exports/<project>/<shot>/{blender,comfyui}/...`.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

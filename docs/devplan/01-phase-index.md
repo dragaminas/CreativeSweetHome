@@ -525,7 +525,7 @@ humana antes de derivarla a consumidores finales.
 ## Phase 17: Estructura automatizada de almacenamiento de escena
 
 ### Status
-`pending`
+`done`
 
 ### Purpose
 Crear desde la UI el scaffold filesystem-first de una escena sin abrir otra
@@ -551,10 +551,12 @@ reproducible desde una accion de producto.
   `Scenes/<project>/<scene>/manifests/assets.json`,
   `Scenes/<project>/<scene>/shots/<shot>/manifests/shot.json`
 - estructura de handoff inicial para `Exports/<project>/<shot>/{blender,comfyui}`
+- prueba browser-backed `phase17-scaffold` sobre `tests/e2e/shell.spec.ts`
+  con validacion en disco de manifiestos y directorios de export bajo
+  `STUDIO_DIR`
 
 ### Open Tasks
-- [`17.2`](tasks/17.2-phase17-e2e-proof.md): probar la creacion real de una
-  estructura de escena revisable
+- Ninguna
 
 ## Phase 18: Catalogacion de assets en UI
 
