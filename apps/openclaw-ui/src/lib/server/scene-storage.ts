@@ -238,17 +238,26 @@ export async function createSceneStorageScaffold(
   await writeManifest(
     assetsManifestPath,
     {
-      schemaVersion: 1,
+      schemaVersion: 2,
       createdAt: nowIso,
       projectId,
       sceneId,
-      characters: [],
-      objects: [],
-      readiness: {
-        references: 'pending',
-        model3d: 'pending',
-        cleanup: 'pending',
-        rigging: 'pending'
+      shotOrder: [initialShotId],
+      assetOrder: {
+        characters: [],
+        objects: [],
+        locations: []
+      },
+      shots: {
+        [initialShotId]: {
+          assetIds: [],
+          locationIds: []
+        }
+      },
+      assets: {},
+      notes: {
+        purpose:
+          'Indice relacional de escena-shots-assets. El tracking de madurez vive en los catalogos de assets.'
       }
     },
     result

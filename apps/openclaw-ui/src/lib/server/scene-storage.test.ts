@@ -78,6 +78,29 @@ describe('scene-storage scaffolding', () => {
     expect(shotManifest.sceneId).toBe('opening-alley');
     expect(shotManifest.shotId).toBe('sh010');
     expect(shotManifest.exportsRoot).toBe(expectedExportRoot);
+
+    const assetsManifest = JSON.parse(await fs.readFile(assetsManifestPath, 'utf8')) as {
+      schemaVersion: number;
+      shotOrder: string[];
+      assetOrder: {
+        characters: string[];
+        objects: string[];
+        locations: string[];
+      };
+      shots: Record<string, { assetIds: string[]; locationIds: string[] }>;
+    };
+
+    expect(assetsManifest.schemaVersion).toBe(2);
+    expect(assetsManifest.shotOrder).toEqual(['sh010']);
+    expect(assetsManifest.assetOrder).toEqual({
+      characters: [],
+      objects: [],
+      locations: []
+    });
+    expect(assetsManifest.shots.sh010).toEqual({
+      assetIds: [],
+      locationIds: []
+    });
   });
 
   it('reports collisions when the scaffold already exists', async () => {
