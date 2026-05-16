@@ -107,6 +107,28 @@ Responsabilidades:
 - publicar estados y resultados
 - reutilizar la misma estructura de evidencia entre CLI, WhatsApp y futuras UIs
 
+### Dominio de negocio UI pipeline-first
+
+La capa UI de producto (`SvelteKit`) debe operar con un modelo de negocio
+normalizado, referencial y orientado a etapas de pipeline, no con tipos ad hoc
+por ruta o workspace.
+
+Piezas canonicas:
+
+- `apps/openclaw-ui/src/lib/types/project.ts`
+- `docs/devplan/UIPlan.md`
+- `docs/devplan/ui-domain-model-rollout.md`
+
+Responsabilidades:
+
+- mantener una identidad unica de `Project`, `Scene`, `Shot`, `AssetDefinition`
+  y `Location`
+- registrar estado por etapa (`StageState`) para habilitar gates de
+  automatizacion
+- mapear cada corrida de backend a `OperationRef` y cada output a `ArtifactRef`
+- evitar duplicacion de payload en tomas: `Shot` consume assets por
+  referencias (`ShotAssetBinding`)
+
 ### Backends y flujos
 
 #### Blender

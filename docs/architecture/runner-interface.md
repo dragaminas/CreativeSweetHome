@@ -213,6 +213,8 @@ Debe incluir:
 - `artifact_refs`
 - `manifest_path`
 - `summary_path`
+- `entity_refs` opcional (`project_id`, `scene_id`, `shot_id`, `asset_id`)
+- `pipeline_stage` opcional para mapear el resultado al estado de negocio
 
 ## Contrato de evidencia
 
@@ -236,6 +238,21 @@ y no una variante especial del canal.
 
 La diferencia entre canales solo deberia estar en como se solicita la corrida y
 como se presenta el resultado al usuario.
+
+## Alineacion con el dominio UI pipeline-first
+
+Desde la linea UI (`phases 15-33`), los resultados del runner deben poder
+hidratar el contrato de dominio en
+`apps/openclaw-ui/src/lib/types/project.ts` sin traducciones ambiguas.
+
+Reglas:
+
+- una operacion que produce cambios de negocio debe mapear a un
+  `OperationRef` estable
+- cada output reusable debe poder registrarse como `ArtifactRef` con ID y ruta
+- cuando aplique, el resultado debe incluir refs de entidad (`project/scene/shot/asset`)
+  para actualizar el estado de etapa (`StageState`) correcto
+- no introducir payloads de estado paralelos por canal, plugin o workspace
 
 ## Regla de no duplicacion
 
