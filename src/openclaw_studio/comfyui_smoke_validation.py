@@ -251,8 +251,110 @@ SMOKE_CASE_SPECS = (
 )
 
 
+# =============================================================================
+# Atomic and Composed test specs (Task 8.18)
+# =============================================================================
+
+ATOMIC_CASE_SPECS = (
+    SmokeCaseSpec(
+        case_id="AT-IMG-02-01",
+        display_label="UC-IMG-02 atomic frame baseline",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-img-02-z-image-turbo-cn-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-IMG-02",
+        preset_id="uc-img-02-frame-baseline-preview",
+    ),
+    SmokeCaseSpec(
+        case_id="AT-VID-01-01",
+        display_label="UC-VID-01 atomic preprocess",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-vid-01-ai-renderer-preprocess-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-VID-01",
+        preset_id="uc-vid-01-preprocess-control-package",
+    ),
+    SmokeCaseSpec(
+        case_id="AT-VID-02-01",
+        display_label="UC-VID-02 atomic baseline segmented",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-vid-02-ai-renderer-video-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=90,
+        use_case_id="UC-VID-02",
+        preset_id="uc-vid-02-video-baseline-segmented",
+        allow_soft_timeout=True,
+    ),
+    SmokeCaseSpec(
+        case_id="AT-IMG-03-01",
+        display_label="UC-IMG-03 atomic style exploration",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-img-03-z-image-style-exploration-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-IMG-03",
+        preset_id="uc-img-03-style-exploration",
+    ),
+    SmokeCaseSpec(
+        case_id="AT-VID-03-01",
+        display_label="UC-VID-03 atomic image-to-video reference",
+        workflow_relpath="ComfyUIWorkflows/local/adaptable/uc-vid-03-image-to-video-wan22-template-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-VID-03",
+        preset_id="uc-vid-03-image-to-video-reference",
+    ),
+    SmokeCaseSpec(
+        case_id="AT-VID-04-01",
+        display_label="UC-VID-04 atomic upscale",
+        workflow_relpath="ComfyUIWorkflows/local/adaptable/uc-vid-04-video-upscale-ganx4-template-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-VID-04",
+        preset_id="uc-vid-04-upscale-reference",
+    ),
+)
+
+COMPOSED_CASE_SPECS = (
+    SmokeCaseSpec(
+        case_id="CP-STILL-01",
+        display_label="UC-IMG-02 -> UC-IMG-03 composed still chain",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-img-03-z-image-style-exploration-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-IMG-03",
+        preset_id="uc-img-03-style-exploration",
+    ),
+    SmokeCaseSpec(
+        case_id="CP-VIDEO-01",
+        display_label="UC-VID-01 -> UC-VID-02 -> UC-VID-04 composed video chain",
+        workflow_relpath="ComfyUIWorkflows/local/minimum/uc-vid-02-ai-renderer-video-rtx3060-v1.json",
+        blocking=True,
+        timeout_seconds=90,
+        use_case_id="UC-VID-02",
+        preset_id="uc-vid-02-video-baseline-segmented",
+        allow_soft_timeout=True,
+    ),
+    SmokeCaseSpec(
+        case_id="CP-MOTION-01",
+        display_label="UC-VID-03 -> UC-VID-04 composed motion chain",
+        workflow_relpath="ComfyUIWorkflows/local/adaptable/uc-vid-04-video-upscale-ganx4-template-v1.json",
+        blocking=True,
+        timeout_seconds=1800,
+        use_case_id="UC-VID-04",
+        preset_id="uc-vid-04-upscale-reference",
+    ),
+)
+
+
 def list_smoke_case_specs() -> list[SmokeCaseSpec]:
     return list(SMOKE_CASE_SPECS)
+
+
+def list_atomic_case_specs() -> list[SmokeCaseSpec]:
+    return list(ATOMIC_CASE_SPECS)
+
+
+def list_composed_case_specs() -> list[SmokeCaseSpec]:
+    return list(COMPOSED_CASE_SPECS)
 
 
 def derive_smoke_run_status(

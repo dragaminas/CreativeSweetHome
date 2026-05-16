@@ -22,6 +22,8 @@ from ..comfyui_smoke_validation import (
     SmokeRunner,
     derive_smoke_run_status,
     list_smoke_case_specs,
+    list_atomic_case_specs,
+    list_composed_case_specs,
 )
 from .contracts import (
     ACTIVE_RUN_STATUSES,
@@ -38,6 +40,8 @@ from .contracts import (
 
 RUNNER_ID = "comfyui"
 SMOKE_TARGET_ALIASES = {"", "all", "smoke", "smoke-suite", "suite"}
+ATOMIC_TARGET_ALIASES = {"", "all", "atomic", "atomic-suite", "suite"}
+COMPOSED_TARGET_ALIASES = {"", "all", "composed", "composed-suite", "suite"}
 
 
 def utc_now() -> str:
@@ -255,33 +259,85 @@ class ComfyUIRunner(Runner):
         )
 
     def list_targets(self, operation_kind: str) -> list[RunnerTarget]:
-        if operation_kind != "validate_smoke":
-            return []
-
-        targets = [
-            RunnerTarget(
-                target_id=SMOKE_SUITE_TARGET_ID,
-                display_label="Smoke suite 8.19",
-                target_kind="suite",
-                operation_kind="validate_smoke",
-                metadata={"default": True},
-            )
-        ]
-        for spec in list_smoke_case_specs():
-            targets.append(
+        if operation_kind == "validate_smoke":
+            targets = [
                 RunnerTarget(
-                    target_id=spec.case_id,
-                    display_label=spec.display_label,
-                    target_kind="case",
+                    target_id=SMOKE_SUITE_TARGET_ID,
+                    display_label="Smoke suite 8.19",
+                    target_kind="suite",
                     operation_kind="validate_smoke",
-                    metadata={
-                        "use_case_id": spec.use_case_id,
-                        "preset_id": spec.preset_id,
-                        "blocking": spec.blocking,
-                    },
+                    metadata={"default": True},
                 )
-            )
-        return targets
+            ]
+            for spec in list_smoke_case_specs():
+                targets.append(
+                    RunnerTarget(
+                        target_id=spec.case_id,
+                        display_label=spec.display_label,
+                        target_kind="case",
+                        operation_kind="validate_smoke",
+                        metadata={
+                            "use_case_id": spec.use_case_id,
+                            "preset_id": spec.preset_id,
+                            "blocking": spec.blocking,
+                        },
+                    )
+                )
+            return targets
+
+        if operation_kind == "validate_atomic":
+            targets = [
+                RunnerTarget(
+                    target_id="atomic",
+                    display_label="Atomic suite 8.18",
+                    target_kind="suite",
+                    operation_kind="validate_atomic",
+                    metadata={"default": True},
+                )
+            ]
+            for spec in list_atomic_case_specs():
+                targets.append(
+                    RunnerTarget(
+                        target_id=spec.case_id,
+                        display_label=spec.display_label,
+                        target_kind="case",
+                        operation_kind="validate_atomic",
+                        metadata={
+                            "use_case_id": spec.use_case_id,
+                            "preset_id": spec.preset_id,
+                            "blocking": spec.blocking,
+                        },
+                    )
+                )
+            return targets
+
+        if operation_kind == "validate_composed":
+            targets = [
+                RunnerTarget(
+                    target_id="composed",
+                    display_label="Composed suite 8.18",
+                    target_kind="suite",
+                    operation_kind="validate_composed",
+                    metadata={"default": True},
+                )
+            ]
+            for spec in list_composed_case_specs():
+                targets.append(
+                    RunnerTarget(
+                        target_id=spec.case_id,
+                        display_label=spec.display_label,
+                        target_kind="case",
+                        operation_kind="validate_composed",
+                        metadata={
+                            "use_case_id": spec.use_case_id,
+                            "preset_id": spec.preset_id,
+                            "blocking": spec.blocking,
+                        },
+                    )
+                )
+            return targets
+
+        return []
 
     def start_run(self, request: StartRunRequest) -> StartRunResponse:
         if request.runner_id != RUNNER_ID:
@@ -297,7 +353,61 @@ class ComfyUIRunner(Runner):
                 ),
             )
 
-        if request.operation_kind != "validate_smoke":
+        if request.operation_kind == "validate_smoke":
+            try:
+                target_id = self.normalize_smoke_target(request.target_id)
+            except ValueError as error:
+                return StartRunResponse(
+                    runner_id=RUNNER_ID,
+                    operation_kind=request.operation_kind,
+                    target_id=request.target_id,
+                    run_id=request.run_id,
+                    accepted=False,
+                    status="fail_compile",
+                    message=str(error),
+                )
+            run_id = request.run_id or datetime.now(timezone.utc).strftime(
+                "smoke-%Y%m%d-%H%M%S"
+            )
+            paths = self.build_smoke_paths(run_id)
+            accepted = True
+        elif request.operation_kind == "validate_atomic":
+            try:
+                target_id = self.normalize_atomic_target(request.target_id)
+            except ValueError as error:
+                return StartRunResponse(
+                    runner_id=RUNNER_ID,
+                    operation_kind=request.operation_kind,
+                    target_id=request.target_id,
+                    run_id=request.run_id,
+                    accepted=False,
+                    status="fail_compile",
+                    message=str(error),
+                )
+            run_id = request.run_id or datetime.now(timezone.utc).strftime(
+                "atomic-%Y%m%d-%H%M%S"
+            )
+            paths = self.build_validation_paths(run_id, "atomic")
+            accepted = True
+        elif request.operation_kind == "validate_composed":
+            try:
+                target_id = self.normalize_composed_target(request.target_id)
+            except ValueError as error:
+                return StartRunResponse(
+                    runner_id=RUNNER_ID,
+                    operation_kind=request.operation_kind,
+                    target_id=request.target_id,
+                    run_id=request.run_id,
+                    accepted=False,
+                    status="fail_compile",
+                    message=str(error),
+                )
+            run_id = request.run_id or datetime.now(timezone.utc).strftime(
+                "composed-%Y%m%d-%H%M%S"
+            )
+            paths = self.build_validation_paths(run_id, "composed")
+            accepted = True
+        else:
             return StartRunResponse(
                 runner_id=RUNNER_ID,
                 operation_kind=request.operation_kind,
@@ -307,27 +417,20 @@ class ComfyUIRunner(Runner):
                 status="unsupported",
                 message=(
                     f"El runner {RUNNER_ID} todavia no soporta "
-                    f"{request.operation_kind!r}. Usa el mismo runner cuando "
-                    "se implemente 8.18."
+                    f"{request.operation_kind!r}."
                 ),
             )
 
-        try:
-            target_id = self.normalize_smoke_target(request.target_id)
-        except ValueError as error:
+        if not accepted:
             return StartRunResponse(
                 runner_id=RUNNER_ID,
                 operation_kind=request.operation_kind,
                 target_id=request.target_id,
                 run_id=request.run_id,
                 accepted=False,
-                status="fail_compile",
-                message=str(error),
+                status="unsupported",
+                message=f"Operacion {request.operation_kind!r} no aceptada.",
             )
-        run_id = request.run_id or datetime.now(timezone.utc).strftime(
-            "smoke-%Y%m%d-%H%M%S"
-        )
-        paths = self.build_smoke_paths(run_id)
 
         if paths["manifest_path"].exists() or paths["summary_path"].exists():
             return StartRunResponse(
@@ -526,18 +629,26 @@ class ComfyUIRunner(Runner):
         run_id: str,
         target_id: str | None,
     ) -> RunResult:
-        if operation_kind != "validate_smoke":
-            return RunResult(
-                runner_id=RUNNER_ID,
-                operation_kind=operation_kind,
-                target_id=target_id,
-                run_id=run_id,
-                status="unsupported",
-                message=f"El worker interno no soporta {operation_kind!r}.",
-            )
+        if operation_kind == "validate_smoke":
+            return self._execute_smoke_run(run_id, target_id)
+        if operation_kind == "validate_atomic":
+            return self._execute_atomic_run(run_id, target_id)
+        if operation_kind == "validate_composed":
+            return self._execute_composed_run(run_id, target_id)
 
+        return RunResult(
+            runner_id=RUNNER_ID,
+            operation_kind=operation_kind,
+            target_id=target_id,
+            run_id=run_id,
+            status="unsupported",
+            message=f"El worker interno no soporta {operation_kind!r}.",
+        )
+
+    def _execute_smoke_run(self, run_id: str, target_id: str | None) -> RunResult:
         normalized_target_id = self.normalize_smoke_target(target_id)
-        state_store = JsonStateStore(self.build_smoke_paths(run_id)["manifest_path"])
+        paths = self.build_smoke_paths(run_id)
+        state_store = JsonStateStore(paths["manifest_path"])
         observer = SmokeRunStateObserver(state_store)
         args = argparse.Namespace(
             repo_root=self.repo_root,
@@ -575,6 +686,104 @@ class ComfyUIRunner(Runner):
 
         return self.get_run_result(run_id)
 
+    def _execute_atomic_run(self, run_id: str, target_id: str | None) -> RunResult:
+        normalized_target_id = self.normalize_atomic_target(target_id)
+        paths = self.build_validation_paths(run_id, "atomic")
+        paths["validation_root"].mkdir(parents=True, exist_ok=True)
+        paths["logs_dir"].mkdir(parents=True, exist_ok=True)
+        paths["manifests_dir"].mkdir(parents=True, exist_ok=True)
+        paths["evidence_dir"].mkdir(parents=True, exist_ok=True)
+        paths["fixtures_dir"].mkdir(parents=True, exist_ok=True)
+        paths["published_dir"].mkdir(parents=True, exist_ok=True)
+        paths["output_dir"].mkdir(parents=True, exist_ok=True)
+
+        state_store = JsonStateStore(paths["manifest_path"])
+        observer = SmokeRunStateObserver(state_store)
+        args = argparse.Namespace(
+            repo_root=self.repo_root,
+            studio_dir=self.studio_dir,
+            comfyui_dir=self.comfyui_dir,
+            comfyui_host=self.comfyui_host,
+            comfyui_port=self.comfyui_port,
+            run_id=run_id,
+            case_id=(
+                None
+                if normalized_target_id == "atomic"
+                else normalized_target_id
+            ),
+        )
+
+        runner = SmokeRunner(args, observer=observer)
+        try:
+            runner.run()
+        except Exception as error:
+            payload = state_store.update(
+                lambda current: current.update(
+                    {
+                        "status": "fail_runtime",
+                        "message": (
+                            "El runner ComfyUI fallo antes de terminar "
+                            f"validate_atomic: {error}"
+                        ),
+                        "current_target_id": None,
+                        "current_prompt_id": None,
+                        "completed_at": utc_now(),
+                    }
+                )
+            )
+            return self.payload_to_result(payload)
+
+        return self.get_run_result(run_id)
+
+    def _execute_composed_run(self, run_id: str, target_id: str | None) -> RunResult:
+        normalized_target_id = self.normalize_composed_target(target_id)
+        paths = self.build_validation_paths(run_id, "composed")
+        paths["validation_root"].mkdir(parents=True, exist_ok=True)
+        paths["logs_dir"].mkdir(parents=True, exist_ok=True)
+        paths["manifests_dir"].mkdir(parents=True, exist_ok=True)
+        paths["evidence_dir"].mkdir(parents=True, exist_ok=True)
+        paths["fixtures_dir"].mkdir(parents=True, exist_ok=True)
+        paths["published_dir"].mkdir(parents=True, exist_ok=True)
+        paths["output_dir"].mkdir(parents=True, exist_ok=True)
+
+        state_store = JsonStateStore(paths["manifest_path"])
+        observer = SmokeRunStateObserver(state_store)
+        args = argparse.Namespace(
+            repo_root=self.repo_root,
+            studio_dir=self.studio_dir,
+            comfyui_dir=self.comfyui_dir,
+            comfyui_host=self.comfyui_host,
+            comfyui_port=self.comfyui_port,
+            run_id=run_id,
+            case_id=(
+                None
+                if normalized_target_id == "composed"
+                else normalized_target_id
+            ),
+        )
+
+        runner = SmokeRunner(args, observer=observer)
+        try:
+            runner.run()
+        except Exception as error:
+            payload = state_store.update(
+                lambda current: current.update(
+                    {
+                        "status": "fail_runtime",
+                        "message": (
+                            "El runner ComfyUI fallo antes de terminar "
+                            f"validate_composed: {error}"
+                        ),
+                        "current_target_id": None,
+                        "current_prompt_id": None,
+                        "completed_at": utc_now(),
+                    }
+                )
+            )
+            return self.payload_to_result(payload)
+
+        return self.get_run_result(run_id)
+
     def normalize_smoke_target(self, target_id: str | None) -> str:
         if target_id is None:
             return SMOKE_SUITE_TARGET_ID
@@ -589,6 +798,32 @@ class ComfyUIRunner(Runner):
             )
         return normalized_target_id
 
+    def normalize_atomic_target(self, target_id: str | None) -> str:
+        if target_id is None:
+            return "atomic"
+        normalized_target_id = str(target_id).strip()
+        if normalized_target_id.lower() in ATOMIC_TARGET_ALIASES:
+            return "atomic"
+        known_case_ids = {spec.case_id for spec in list_atomic_case_specs()}
+        if normalized_target_id not in known_case_ids:
+            raise ValueError(
+                f"case_id desconocido para atomic validation: {normalized_target_id!r}."
+            )
+        return normalized_target_id
+
+    def normalize_composed_target(self, target_id: str | None) -> str:
+        if target_id is None:
+            return "composed"
+        normalized_target_id = str(target_id).strip()
+        if normalized_target_id.lower() in COMPOSED_TARGET_ALIASES:
+            return "composed"
+        known_case_ids = {spec.case_id for spec in list_composed_case_specs()}
+        if normalized_target_id not in known_case_ids:
+            raise ValueError(
+                f"case_id desconocido para composed validation: {normalized_target_id!r}."
+            )
+        return normalized_target_id
+
     def build_smoke_paths(self, run_id: str) -> dict[str, Path]:
         validation_root = self.studio_dir / "Validation" / RUNNER_ID / "smoke" / run_id
         manifests_dir = validation_root / "manifests"
@@ -599,6 +834,29 @@ class ComfyUIRunner(Runner):
             "manifests_dir": manifests_dir,
             "evidence_dir": evidence_dir,
             "logs_dir": logs_dir,
+            "manifest_path": manifests_dir / "run.json",
+            "summary_path": manifests_dir / "summary.json",
+            "evidence_path": evidence_dir / "summary.md",
+            "stdout_log_path": logs_dir / "runner.stdout.log",
+            "stderr_log_path": logs_dir / "runner.stderr.log",
+        }
+
+    def build_validation_paths(self, run_id: str, validation_type: str) -> dict[str, Path]:
+        validation_root = self.studio_dir / "Validation" / RUNNER_ID / validation_type / run_id
+        manifests_dir = validation_root / "manifests"
+        evidence_dir = validation_root / "evidence"
+        logs_dir = validation_root / "logs"
+        fixtures_dir = validation_root / "fixtures"
+        published_dir = validation_root / "published"
+        output_dir = validation_root / "output"
+        return {
+            "validation_root": validation_root,
+            "manifests_dir": manifests_dir,
+            "evidence_dir": evidence_dir,
+            "logs_dir": logs_dir,
+            "fixtures_dir": fixtures_dir,
+            "published_dir": published_dir,
+            "output_dir": output_dir,
             "manifest_path": manifests_dir / "run.json",
             "summary_path": manifests_dir / "summary.json",
             "evidence_path": evidence_dir / "summary.md",
