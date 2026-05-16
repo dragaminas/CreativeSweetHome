@@ -7,18 +7,18 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 
 ## Summary
 
-- Total task files: `74`
+- Total task files: `75`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `12`
-- `pending`: `51`
+- `done`: `15`
+- `pending`: `49`
 
 ## Tasks
 
 | Task | Phase | Status | File |
 | --- | --- | --- | --- |
 | `1.2` Hardening del usuario runtime | `1` Hardening del sistema anfitrion | `pending` | [docs/devplan/tasks/1.2-runtime-user-hardening.md](docs/devplan/tasks/1.2-runtime-user-hardening.md) |
-| `8.18` Resultados de validacion atomica y compuesta de ComfyUI | `8` Productizacion de workflows ComfyUI para imagen y video | `pending` | [docs/devplan/tasks/8.18-comfyui-atomic-composed-validation-results.md](docs/devplan/tasks/8.18-comfyui-atomic-composed-validation-results.md) |
+| `8.18` Resultados de validacion atomica y compuesta de ComfyUI | `8` Productizacion de workflows ComfyUI para imagen y video | `done` | [docs/devplan/tasks/8.18-comfyui-atomic-composed-validation-results.md](docs/devplan/tasks/8.18-comfyui-atomic-composed-validation-results.md) |
 | `9.11.3` Resultados de validacion real de escenas SF3D | `9` MVP 3D en ComfyUI con SF3D y composicion posterior en Blender | `blocked` | [docs/devplan/tasks/9.11.3-scene-validation-results.md](docs/devplan/tasks/9.11.3-scene-validation-results.md) |
 | `11.6` Comparativa local de Trellis2 con fixture historico e imagen creativa | `11` Reapertura 3D en ComfyUI con Trellis2 GGUF | `archived` | [docs/devplan/tasks/11.6-trellis2-comparative-run.md](docs/devplan/tasks/11.6-trellis2-comparative-run.md) |
 | `11.7` Import Blender y metricas de outputs Trellis2 | `11` Reapertura 3D en ComfyUI con Trellis2 GGUF | `archived` | [docs/devplan/tasks/11.7-trellis2-blender-import-metrics.md](docs/devplan/tasks/11.7-trellis2-blender-import-metrics.md) |
@@ -41,8 +41,9 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `15.1` Shell de producto con SvelteKit y workspaces embebidos | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.1-sveltekit-product-shell-and-embedded-workspaces.md](docs/devplan/tasks/15.1-sveltekit-product-shell-and-embedded-workspaces.md) |
 | `15.1.1` Instalacion de dependencias de Phase 15 | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.1.1-phase15-dependency-installation.md](docs/devplan/tasks/15.1.1-phase15-dependency-installation.md) |
 | `15.2` Prueba end-to-end de Phase 15 | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.2-phase15-e2e-proof.md](docs/devplan/tasks/15.2-phase15-e2e-proof.md) |
-| `16.1` Workspace UI de descripcion de escena | `16` Descripcion de escena en UI | `pending` | [docs/devplan/tasks/16.1-ui-scene-description-workspace.md](docs/devplan/tasks/16.1-ui-scene-description-workspace.md) |
+| `16.1` Workspace UI de descripcion de escena | `16` Descripcion de escena en UI | `done` | [docs/devplan/tasks/16.1-ui-scene-description-workspace.md](docs/devplan/tasks/16.1-ui-scene-description-workspace.md) |
 | `16.2` Prueba end-to-end de Phase 16 | `16` Descripcion de escena en UI | `done` | [docs/devplan/tasks/16.2-phase16-e2e-proof.md](docs/devplan/tasks/16.2-phase16-e2e-proof.md) |
+| `16.3` Contrato UI de navegacion y seams de servicios para maqueta inicial | `16` Descripcion de escena en UI | `done` | [docs/devplan/tasks/16.3-ui-navigation-service-contract-and-mock-seams.md](docs/devplan/tasks/16.3-ui-navigation-service-contract-and-mock-seams.md) |
 | `17.1` Scaffolding UI de almacenamiento de escena | `17` Estructura automatizada de almacenamiento de escena | `done` | [docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md](docs/devplan/tasks/17.1-ui-scene-storage-scaffolding.md) |
 | `17.2` Prueba end-to-end de Phase 17 | `17` Estructura automatizada de almacenamiento de escena | `done` | [docs/devplan/tasks/17.2-phase17-e2e-proof.md](docs/devplan/tasks/17.2-phase17-e2e-proof.md) |
 | `18.1` Catalogo UI de assets | `18` Catalogacion de assets en UI | `pending` | [docs/devplan/tasks/18.1-ui-asset-catalog.md](docs/devplan/tasks/18.1-ui-asset-catalog.md) |
