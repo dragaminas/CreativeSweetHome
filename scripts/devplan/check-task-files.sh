@@ -104,11 +104,11 @@ for task_file in "${changed_task_files[@]}"; do
       failures=1
     fi
 
-    microtask_lines="$(rg '^- \\[ \\] MT[0-9]+:' "$task_file" || true)"
+    microtask_lines="$(rg '^- \[ \] MT[0-9]+:' "$task_file" || true)"
     if [[ -z "$microtask_lines" ]]; then
       microtask_count=0
     else
-      microtask_count="$(printf '%s\n' "$microtask_lines" | rg -c '^- \\[ \\] MT[0-9]+:')"
+      microtask_count="$(printf '%s\n' "$microtask_lines" | rg -c '^- \[ \] MT[0-9]+:')"
     fi
 
     if (( microtask_count < 3 || microtask_count > 9 )); then
