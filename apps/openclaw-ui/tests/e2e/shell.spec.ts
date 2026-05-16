@@ -278,15 +278,95 @@ test.describe('phase17-scaffold', () => {
     const assetsManifest = JSON.parse(await fs.readFile(expectedAssetsManifestPath, 'utf8')) as {
       projectId: string;
       sceneId: string;
-      readiness: Record<string, string>;
+      schemaVersion: number;
+      shotOrder: string[];
+      assetOrder: {
+        characters: string[];
+        objects: string[];
+        locations: string[];
+      };
+      shots: Record<string, { assetIds: string[]; locationIds: string[] }>;
     };
     expect(assetsManifest.projectId).toBe(projectId);
     expect(assetsManifest.sceneId).toBe(sceneId);
-    expect(assetsManifest.readiness).toEqual({
-      references: 'pending',
-      model3d: 'pending',
-      cleanup: 'pending',
-      rigging: 'pending'
+    expect(assetsManifest.schemaVersion).toBe(2);
+    expect(assetsManifest.shotOrder).toEqual([shotId]);
+    expect(assetsManifest.assetOrder).toEqual({
+      characters: [],
+      objects: [],
+      locations: []
     });
+    expect(assetsManifest.shots[shotId]).toEqual({
+      assetIds: [],
+      locationIds: []
+    });
+  });
+});
+
+test.describe('phase18-asset-catalog', () => {
+  test('creates character/object assets and persists maturity updates from the assets workspace', async ({
+    page
+  }) => {
+    const uniqueSuffix = Date.now();
+    const characterLabel = `Nora-${uniqueSuffix}`;
+    const objectLabel = `Drone-${uniqueSuffix}`;
+
+    const characterManifestPath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      'pilot-project',
+      'sc001',
+      'manifests',
+      'character-catalog.json'
+    );
+    const objectManifestPath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      'pilot-project',
+      'sc001',
+      'manifests',
+      'object-catalog.json'
+    );
+
+    await page.goto('/workspaces/assets');
+    await page.waitForTimeout(300);
+
+    const createAssetPanel = page.locator('section.panel', { hasText: 'Crear asset' }).first();
+    const kindSelect = createAssetPanel.locator('select').first();
+    const labelInput = createAssetPanel.getByPlaceholder('Nombre del asset');
+    const createAssetButton = createAssetPanel.getByRole('button', { name: 'Crear asset' });
+
+    await labelInput.fill(characterLabel);
+    await createAssetButton.click({ force: true });
+    await expect(page.getByText('Asset creado:', { exact: false })).toBeVisible();
+
+    await kindSelect.selectOption('object');
+    await labelInput.fill(objectLabel);
+    await createAssetButton.click({ force: true });
+    await expect(page.getByText('Asset creado:', { exact: false })).toBeVisible();
+
+    await kindSelect.selectOption('character');
+
+    const characterRow = page.locator('.asset-table tbody tr', { hasText: characterLabel }).first();
+    await expect(characterRow).toBeVisible();
+    await characterRow.locator('select').nth(0).selectOption('default_benchmark_animation');
+    await characterRow.locator('select').nth(1).selectOption('ready');
+    await characterRow.getByRole('button', { name: 'Guardar estado' }).click();
+    await expect(page.getByText('Estado actualizado', { exact: false })).toBeVisible();
+
+    const characterManifest = JSON.parse(await fs.readFile(characterManifestPath, 'utf8')) as {
+      assets: Array<{ label: string; stage: string; stageState: string }>;
+    };
+    const objectManifest = JSON.parse(await fs.readFile(objectManifestPath, 'utf8')) as {
+      assets: Array<{ label: string }>;
+    };
+
+    const characterEntry = characterManifest.assets.find((asset) => asset.label === characterLabel);
+    const objectEntry = objectManifest.assets.find((asset) => asset.label === objectLabel);
+
+    expect(characterEntry).toBeDefined();
+    expect(characterEntry?.stage).toBe('default_benchmark_animation');
+    expect(characterEntry?.stageState).toBe('ready');
+    expect(objectEntry).toBeDefined();
   });
 });
