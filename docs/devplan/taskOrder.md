@@ -1,8 +1,5 @@
 Perfecto. Este es el orden ideal para que cada cierre te deje material útil para la e2e del siguiente paso.
 
-17.1 → 17.2
-Salida: estructura de escena en STUDIO_DIR (alimenta catálogo).
-
 18.1 → 18.2
 Salida: catálogo de assets con estado (alimenta referencias).
 

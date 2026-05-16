@@ -56,6 +56,34 @@ Para no abrir una arquitectura paralela:
 - la capa de traduccion de prompts se vuelve infraestructura compartida de la
   UI, no logica ad hoc por workflow
 
+## Contrato de dominio pipeline-first
+
+La UI y sus adapters deben tratar el modelo de negocio como contrato canónico,
+no como tipos locales por workspace. La fuente unica queda en:
+
+- `apps/openclaw-ui/src/lib/types/project.ts`
+
+Reglas de arquitectura y logica:
+
+- `Shot` consume assets por referencias (`ShotAssetBinding`) y nunca copia
+  payloads completos de asset
+- cada entidad de negocio debe poder reportar estado por etapa
+  (`StageState`) para habilitar gates automatizados
+- cada operacion debe dejar trazabilidad estable (`OperationRef`) y refs de
+  artefacto (`ArtifactRef`) bajo rutas canonicas de `STUDIO_DIR`
+- la progresion de madurez de asset es secuencial:
+  `description -> reference_image -> model_3d -> base_animation -> asset_animation -> animation_composition -> composition_render`
+
+Regla UX obligatoria:
+
+- complejidad referencial transparente para la persona usuaria: la UI muestra
+  labels, readiness y acciones sugeridas; los `id` y joins quedan en adapters
+  y view-models resueltos
+
+Plan de adopcion transversal (tareas cerradas + pendientes):
+
+- [`ui-domain-model-rollout.md`](ui-domain-model-rollout.md)
+
 ## Snapshot implementado en `15.1` y validado en `15.2`
 
 La implementacion actual del shell ya deja materializadas estas fronteras:
@@ -313,3 +341,4 @@ Quedan fuera de esta linea de fases inicial:
 - `docs/devplan/01-phase-index.md`
 - `docs/devplan/feature-map.md`
 - `docs/devplan/tasks/15.*` a `docs/devplan/tasks/33.*`
+- `docs/devplan/ui-domain-model-rollout.md`

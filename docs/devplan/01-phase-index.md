@@ -492,6 +492,38 @@ internas como experiencia primaria.
 ### Open Tasks
 - Ninguna
 
+## Decision transversal UI (`phases 16-33`)
+
+### Status
+`active`
+
+### Purpose
+Alinear todas las tareas UI (pendientes y ya cerradas) con un unico contrato de
+negocio orientado a pipeline para evitar modelos paralelos por fase o backend.
+
+### Current Decision
+El contrato canonico de dominio UI queda centralizado en:
+`apps/openclaw-ui/src/lib/types/project.ts`, con enfoque normalizado y
+referencial (`Project`, `Scene`, `Shot`, `AssetDefinition`, `Location`) y
+trazabilidad explicita por `OperationRef` y `ArtifactRef`.
+
+### Stable Artifacts
+- [`UIPlan.md`](UIPlan.md)
+- [`ui-domain-model-rollout.md`](ui-domain-model-rollout.md)
+- [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
+- [`../SAD.md`](../SAD.md)
+- [`../../apps/openclaw-ui/src/lib/types/project.ts`](../../apps/openclaw-ui/src/lib/types/project.ts)
+
+### Reusable Infrastructure Produced
+- contrato de estado por etapas con `StageState`
+- gating uniforme de automation por `PipelineStage`, `ShotStage`, `SceneStage`
+- pauta de adopcion incremental para tareas `done` y `pending` en `15-33`
+
+### Open Tasks
+- aplicar este contrato en cada task pendiente de `18` a `33`
+- migrar incrementalmente payloads legacy cuando se toque codigo de tasks ya
+  cerradas (`15`, `16.2`, `17.*`)
+
 ## Phase 16: Descripcion de escena en UI
 
 ### Status
