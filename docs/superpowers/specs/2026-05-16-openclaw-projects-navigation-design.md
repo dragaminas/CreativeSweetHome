@@ -8,7 +8,17 @@ Make the product shell navigation reflect the real project folder structure, usi
 
 The shell sidebar in `apps/openclaw-ui/src/routes/+layout.svelte` is currently flat and reads `apps/openclaw-ui/src/lib/data/project-editor-content.json` directly. The repo already has a stronger UI boundary in `apps/openclaw-ui/src/lib/types/navigation/projectNavigation`, `ProjectUiServices`, `DomainSnapshot`, adapter helpers, and an in-memory seam. The implementation should reuse those contracts instead of adding a second UI domain model.
 
-The existing `AssetType` enum already includes `Character`, `Object`, and `Location`. The canonical `AssetKind` in `apps/openclaw-ui/src/lib/types/project.ts` currently only models `character` and `object`, while locations are represented separately as `Location`. This design treats locations as navigable complex assets under the `Assets > Locations` branch while preserving enough compatibility with the existing `Location` entity.
+The current code has two asset taxonomies: `AssetType` in `navigation/projectEdition/assetEdition.ts` and `AssetKind` in `apps/openclaw-ui/src/lib/types/project.ts`. That duplication should be removed. The project domain model is the source of truth for asset kinds, and navigation should keep only user-facing editor and navigator contracts.
+
+The implementation should normalize asset typing first:
+
+```ts
+export type AssetKind = 'character' | 'object' | 'location';
+```
+
+`navigation/projectEdition/assetEdition.ts` should import `AssetKind` from `types/project.ts` instead of defining its own `AssetType` enum. Location assets should use the same domain kind as characters and objects when they appear in navigation, editor contracts, relation manifests, and filesystem manifests.
+
+The existing `Location` interface may remain in `types/project.ts` only for location-specific metadata such as zones, constraints, and layout artifacts. It must not create a separate navigation taxonomy. A navigable location is an asset with `kind: 'location'`; specialized location metadata can be resolved by matching the same id in `locations` when needed.
 
 ## Environment And Default Root
 
@@ -55,7 +65,17 @@ openclaw-projects/
 
 `project.json` stores project identity, display name, description, and top-level ordering. `scene.json`, `shot.json`, and `asset.json` store the editable metadata needed to build `SceneEdition`, `ShotEdition`, and `AssetEditor` projections. Empty category folders are valid and should still render category headers.
 
-Locations are stored under `assets/locations/<id>/asset.json` for navigation and editing consistency. If existing scene storage emits `locations` as separate domain entities, the loader maps them into location asset navigation entries.
+Locations are stored under `assets/locations/<id>/asset.json` for navigation and editing consistency. Their manifests use the same `AssetKind` field as characters and objects:
+
+```json
+{
+  "id": "loc-alley",
+  "name": "Rainy Alley",
+  "kind": "location"
+}
+```
+
+If existing scene storage emits richer `locations` metadata, the loader maps that metadata onto the same location asset id without creating a second navigation entity.
 
 ## Relation Manifest
 
@@ -145,6 +165,8 @@ Asset -> /?editor=asset&projectId=<projectId>&assetId=<assetId>
 
 The projection should remain aligned with `apps/openclaw-ui/src/lib/types/navigation/projectNavigation`. The implementation may refine the existing interfaces so that `AssetNavigation` follows the same `Navigator` shape as scenes and shots, and so assets can be grouped by `characters`, `objects`, and `locations`.
 
+Navigation contracts should depend on domain types where they need domain categories. For example, asset navigation grouping can use `AssetKind` from `types/project.ts`, but should not define a separate enum or duplicate the allowed values in the navigation folder.
+
 ## Data Flow
 
 1. Server resolves `OPENCLAW_PROJECTS_DIR` or defaults to `<repoRoot>/openclaw-projects`.
@@ -168,6 +190,7 @@ If `relations.json` is missing, the loader can derive a conservative relation ma
 
 Unit tests cover:
 
+- Asset type normalization: `navigation` imports `AssetKind` from `types/project.ts` and no longer exports a separate `AssetType`.
 - `OPENCLAW_PROJECTS_DIR` resolution and default `<repoRoot>/openclaw-projects`.
 - Filesystem fixture loading into navigation hierarchy.
 - Relation manifest validation and omission of missing references.
