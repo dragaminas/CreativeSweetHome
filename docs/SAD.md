@@ -116,6 +116,10 @@ por ruta o workspace.
 Piezas canonicas:
 
 - `apps/openclaw-ui/src/lib/types/project.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/baseEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/sceneEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/shotEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/applicationServices.ts`
 - `docs/devplan/UIPlan.md`
 - `docs/devplan/ui-domain-model-rollout.md`
 
@@ -128,6 +132,8 @@ Responsabilidades:
 - mapear cada corrida de backend a `OperationRef` y cada output a `ArtifactRef`
 - evitar duplicacion de payload en tomas: `Shot` consume assets por
   referencias (`ShotAssetBinding`)
+- exponer la interaccion UI como eventos de intencion (`UiEventPointer`)
+  apuntando a servicios de aplicacion con contratos de query/command
 
 ### Backends y flujos
 

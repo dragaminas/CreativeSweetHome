@@ -62,6 +62,10 @@ La UI y sus adapters deben tratar el modelo de negocio como contrato canónico,
 no como tipos locales por workspace. La fuente unica queda en:
 
 - `apps/openclaw-ui/src/lib/types/project.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/baseEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/sceneEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/shotEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/applicationServices.ts`
 
 Reglas de arquitectura y logica:
 
@@ -73,6 +77,13 @@ Reglas de arquitectura y logica:
   artefacto (`ArtifactRef`) bajo rutas canonicas de `STUDIO_DIR`
 - la progresion de madurez de asset es secuencial:
   `description -> reference_image -> model_3d -> base_animation -> asset_animation -> animation_composition -> composition_render`
+- la capa de UI dispara solo eventos de intencion (`UiEventPointer`) con
+  payload minimo por `id`; la logica compleja vive en servicios de aplicacion
+  (`ProjectApplicationService`, `SceneApplicationService`,
+  `ShotApplicationService`, `AssetApplicationService`)
+- los servicios de lectura para maqueta o implementacion real deben entrar por
+  contratos de consulta explicitos (`ProjectNavigationQueryService`,
+  `ProjectEditionQueryService`)
 
 Regla UX obligatoria:
 
@@ -117,6 +128,16 @@ revisable y filesystem-first bajo:
 La prueba browser-backed de `16.2` valida la captura real y persistencia de
 esa ruta desde el flujo canonico en `tests/e2e/shell.spec.ts` (`phase16-scene-brief`),
 incluyendo `workspace` de escena y `POST /api/briefs/scene`.
+
+La task `16.3` materializa el seam ejecutable de navegacion/edicion con
+frontera `query/command` sobre contrato thin UI:
+
+- `apps/openclaw-ui/src/lib/navigation/adapters/project-edition-adapters.ts`
+- `apps/openclaw-ui/src/lib/navigation/mocks/in-memory-project-ui-services.ts`
+
+Ese seam se expone de forma minima en el shell (`/`) para iteracion de maqueta
+sin backend real y queda validado por la prueba browser-backed
+`phase16-ui-contract-mock` en `tests/e2e/shell.spec.ts`.
 
 Para `UX-02` (phase `17`) el shell ahora crea el scaffold canonico desde el
 brief guardado en:

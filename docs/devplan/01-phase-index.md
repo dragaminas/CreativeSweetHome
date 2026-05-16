@@ -503,9 +503,10 @@ negocio orientado a pipeline para evitar modelos paralelos por fase o backend.
 
 ### Current Decision
 El contrato canonico de dominio UI queda centralizado en:
-`apps/openclaw-ui/src/lib/types/project.ts`, con enfoque normalizado y
-referencial (`Project`, `Scene`, `Shot`, `AssetDefinition`, `Location`) y
-trazabilidad explicita por `OperationRef` y `ArtifactRef`.
+`apps/openclaw-ui/src/lib/types/project.ts` y su capa de interaccion UI en
+`apps/openclaw-ui/src/lib/types/navigation/projectEdition/`, con enfoque
+normalizado y referencial (`Project`, `Scene`, `Shot`, `AssetDefinition`,
+`Location`) y trazabilidad explicita por `OperationRef` y `ArtifactRef`.
 
 ### Stable Artifacts
 - [`UIPlan.md`](UIPlan.md)
@@ -513,10 +514,17 @@ trazabilidad explicita por `OperationRef` y `ArtifactRef`.
 - [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
 - [`../SAD.md`](../SAD.md)
 - [`../../apps/openclaw-ui/src/lib/types/project.ts`](../../apps/openclaw-ui/src/lib/types/project.ts)
+- [`../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/baseEdition.ts`](../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/baseEdition.ts)
+- [`../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/sceneEdition.ts`](../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/sceneEdition.ts)
+- [`../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/shotEdition.ts`](../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/shotEdition.ts)
+- [`../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/applicationServices.ts`](../../apps/openclaw-ui/src/lib/types/navigation/projectEdition/applicationServices.ts)
 
 ### Reusable Infrastructure Produced
 - contrato de estado por etapas con `StageState`
 - gating uniforme de automation por `PipelineStage`, `ShotStage`, `SceneStage`
+- contratos UI thin de `view + events`, con punteros explicitos de `@service`
+  y payloads minimos por `id`
+- separacion formal `query/command` para maquetas UI y backend real
 - pauta de adopcion incremental para tareas `done` y `pending` en `15-33`
 
 ### Open Tasks
@@ -527,7 +535,7 @@ trazabilidad explicita por `OperationRef` y `ArtifactRef`.
 ## Phase 16: Descripcion de escena en UI
 
 ### Status
-`active`
+`done`
 
 ### Purpose
 Abrir la entrada principal del pipeline como una experiencia guiada para
@@ -549,10 +557,15 @@ humana antes de derivarla a consumidores finales.
 - checkpoints de feedback legible para brief aceptado, incompleto o ambiguo
 - prueba browser-backed `phase16-scene-brief` sobre `tests/e2e/shell.spec.ts`
   con persistencia real en `STUDIO_DIR/Scenes/.../briefs/scene-brief.json`
+- adapters de contrato UI thin (`DomainSnapshot -> NavigationPanel/Edition views`)
+  en `src/lib/navigation/adapters/project-edition-adapters.ts`
+- implementacion deterministic `in-memory` de `ProjectUiServices` en
+  `src/lib/navigation/mocks/in-memory-project-ui-services.ts`
+- prueba browser-backed `phase16-ui-contract-mock` sobre
+  `tests/e2e/shell.spec.ts` para validar query/command seams desde el shell
 
 ### Open Tasks
-- [`16.1`](tasks/16.1-ui-scene-description-workspace.md): implementar la
-  captura guiada y la traduccion inicial del brief de escena
+- Ninguna
 
 ## Phase 17: Estructura automatizada de almacenamiento de escena
 

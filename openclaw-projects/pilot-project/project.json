@@ -1,0 +1,8 @@
+{
+  "id": "pilot-project",
+  "name": "Pilot Project",
+  "description": "Filesystem-backed pilot project.",
+  "scriptIds": [
+    "script-main"
+  ]
+}

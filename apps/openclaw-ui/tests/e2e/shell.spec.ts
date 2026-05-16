@@ -6,41 +6,72 @@ import { expect, test } from '@playwright/test';
 
 const STUDIO_DIR = process.env.STUDIO_DIR || path.join(os.homedir(), 'Studio');
 
-test.describe('phase15-shell', () => {
-  test('boots the shell and exposes the canonical runner bridge', async ({
-    page,
-    request
+test.describe('project-editor-shell', () => {
+  test('opens ProjectsEditor from the layout navigation into the right editor panel', async ({
+    page
   }) => {
     await page.goto('/');
 
+    await expect(page.getByTestId('project-navigation')).toBeVisible();
+    await expect(page.getByTestId('nav-projects')).toHaveAttribute('href', '/?editor=projects');
+    await expect(page.getByTestId('editor-panel')).toBeVisible();
+    await expect(page.getByTestId('projects-editor')).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'OpenClaw Studio' }).first()
+      page.getByTestId('projects-editor').getByRole('link', { name: 'Pilot Project' })
     ).toBeVisible();
-    await expect(page.getByText('Canonical bridge')).toBeVisible();
 
-    const response = await request.get('/api/runners');
-    expect(response.ok()).toBeTruthy();
+    await page.getByTestId('nav-project-pilot-project').click();
+    await expect(page).toHaveURL(/editor=project/);
+    await expect(page.getByTestId('project-editor')).toBeVisible();
 
-    const payload = await response.json();
-    expect(payload.runners.map((runner: { runner_id: string }) => runner.runner_id)).toContain(
-      'comfyui'
+    await page.getByTestId('nav-projects').click();
+    await expect(page).toHaveURL(/editor=projects/);
+    await expect(page.getByTestId('projects-editor')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add Project' }).click();
+    await expect(page.getByText('Project 2')).toBeVisible();
+  });
+
+  test('opens filesystem-backed asset, scene, and shot editors from nested navigation', async ({
+    page
+  }) => {
+    await page.goto('/');
+
+    await expect(page.getByTestId('nav-project-pilot-project')).toBeVisible();
+    await expect(page.getByTestId('nav-scenes-pilot-project')).toContainText('Scenes');
+    await expect(page.getByTestId('nav-assets-pilot-project')).toContainText('Assets');
+    await expect(page.getByTestId('nav-asset-category-characters-pilot-project')).toContainText(
+      'Characters'
+    );
+    await expect(page.getByTestId('nav-asset-category-objects-pilot-project')).toContainText(
+      'Objects'
+    );
+    await expect(page.getByTestId('nav-asset-category-locations-pilot-project')).toContainText(
+      'Locations'
     );
 
-    await expect(page.getByTestId('runner-contract-path')).toBeVisible();
-    await expect(page.getByTestId('runner-contract-path')).toContainText(
-      'runner-interface.md'
-    );
+    await page.getByTestId('nav-asset-asset-nora').click();
+    await expect(page).toHaveURL(/editor=asset/);
+    const assetEditor = page.getByTestId('asset-editor');
+    await expect(assetEditor).toBeVisible();
+    await expect(assetEditor.getByRole('heading', { name: 'Nora' })).toBeVisible();
+    await expect(
+      assetEditor.getByText('Assets3D/pilot-project/asset-nora', { exact: false })
+    ).toBeVisible();
 
-    await page.getByRole('link', { name: 'ComfyUI engine' }).first().click();
-    await expect(page.getByRole('heading', { name: 'ComfyUI', exact: true })).toBeVisible();
-    await expect(page.getByText('runner_id').first()).toBeVisible();
-    await expect(page.getByText('comfyui').first()).toBeVisible();
+    await page.getByTestId('nav-scene-sc001').click();
+    await expect(page).toHaveURL(/editor=scene/);
+    const sceneEditor = page.getByTestId('scene-editor');
+    await expect(sceneEditor).toBeVisible();
+    await expect(sceneEditor.getByRole('heading', { name: 'Opening Alley' })).toBeVisible();
+    await expect(sceneEditor.getByText('script-main')).toBeVisible();
 
-    await page.getByRole('link', { name: 'Kimodo' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Kimodo', exact: true })).toBeVisible();
-
-    const frame = page.frameLocator('iframe[title="Kimodo embedded workspace seam"]');
-    await expect(frame.getByRole('heading', { name: 'Kimodo embed seam', exact: true })).toBeVisible();
+    await page.getByTestId('nav-shot-sh010').click();
+    await expect(page).toHaveURL(/editor=shot/);
+    const shotEditor = page.getByTestId('shot-editor');
+    await expect(shotEditor).toBeVisible();
+    await expect(shotEditor.getByRole('heading', { name: 'Shot 010' })).toBeVisible();
+    await expect(shotEditor.getByText('4800 ms')).toBeVisible();
   });
 });
 

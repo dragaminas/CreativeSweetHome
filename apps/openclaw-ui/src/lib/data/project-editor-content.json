@@ -1,0 +1,80 @@
+{
+  "projects": ["Pilot Project"],
+  "assets": [
+    {
+      "id": "asset-nora",
+      "name": "Nora",
+      "type": "Character",
+      "systemPath": "Assets3D/pilot-project/asset-nora",
+      "description": "Main character of the opening chase.",
+      "metrics": {
+        "polygonCount": 2048,
+        "textureResolution": "1024x1024",
+        "riggingComplexity": "low",
+        "otherMetrics": "mock-projection"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "sc001",
+      "name": "Opening Alley",
+      "description": "Initial scene scaffolded from the phase16 brief.",
+      "projectId": "pilot-project",
+      "scriptId": "script-main",
+      "shotIds": ["sh010"],
+      "locationIds": ["loc-alley"],
+      "assetIds": ["asset-nora"],
+      "sceneProgress": 50,
+      "pipeline": [
+        {
+          "stage": "scene_brief",
+          "status": "ready",
+          "label": "Scene Brief",
+          "blockers": []
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "sh010",
+      "name": "Shot 010",
+      "description": "Nora enters the rainy alley.",
+      "projectId": "pilot-project",
+      "sceneId": "sc001",
+      "scriptBeatId": "beat-001",
+      "locationId": "loc-alley",
+      "order": 1,
+      "durationMs": 4800,
+      "frameRate": 24,
+      "framing": {
+        "shotSize": "ms",
+        "cameraAngle": "eye",
+        "cameraMove": "dolly",
+        "lensMm": 35
+      },
+      "bindings": [
+        {
+          "role": "primary",
+          "asset": {
+            "id": "asset-nora",
+            "label": "Nora",
+            "kind": "character"
+          },
+          "requiredStage": "model_3d",
+          "readiness": "pending",
+          "actions": []
+        }
+      ],
+      "pipeline": [
+        {
+          "stage": "shot_generation",
+          "status": "pending",
+          "label": "Shot Generation",
+          "blockers": []
+        }
+      ]
+    }
+  ]
+}

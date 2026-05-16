@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "projectId": "pilot-project",
+  "sceneOrder": [
+    "sc001"
+  ],
+  "assetOrder": {
+    "characters": [
+      "asset-nora"
+    ],
+    "objects": [],
+    "locations": [
+      "loc-alley"
+    ]
+  },
+  "scenes": {
+    "sc001": {
+      "shotOrder": [
+        "sh010"
+      ],
+      "assetIds": [
+        "asset-nora",
+        "loc-alley"
+      ],
+      "locationIds": [
+        "loc-alley"
+      ]
+    }
+  },
+  "shots": {
+    "sh010": {
+      "sceneId": "sc001",
+      "assetIds": [
+        "asset-nora",
+        "loc-alley"
+      ]
+    }
+  },
+  "assets": {
+    "asset-nora": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": [
+        "sh010"
+      ]
+    },
+    "loc-alley": {
+      "kind": "location",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": [
+        "sh010"
+      ]
+    }
+  }
+}

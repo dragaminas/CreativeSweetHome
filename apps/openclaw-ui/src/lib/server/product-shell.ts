@@ -23,8 +23,8 @@ export function buildWorkspaceCatalog(
       phase: '16',
       path: '/workspaces/scene',
       routeRole: 'authoring',
-      stateLabel: 'Next phase',
-      stateTone: 'warning',
+      stateLabel: 'Available',
+      stateTone: 'positive',
       summary:
         'Captura la intencion humana y la traduce a un brief estructurado antes de tocar motores creativos.',
       boundary:
@@ -32,8 +32,8 @@ export function buildWorkspaceCatalog(
       runnerIds: [],
       evidenceRoots: [],
       notes: [
-        'Preparado para phase 16 sobre la misma app',
-        'Sin persistencia ad hoc fuera de STUDIO_DIR'
+        'Workspace guiado activo para scene brief sobre la misma app',
+        'Persistencia canonica en STUDIO_DIR/Scenes/<project>/<scene>/briefs/scene-brief.json'
       ]
     },
     {

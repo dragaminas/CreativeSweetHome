@@ -6,6 +6,7 @@ export interface RepoContext {
   appRoot: string;
   repoRoot: string;
   pythonPath: string;
+  openclawProjectsDir: string;
   studioDir: string;
   openclawStateDir: string;
   assets3dDir: string;
@@ -41,6 +42,15 @@ function findRepoRoot(startDir: string): string {
   throw new Error(`No se encontro la raiz del repo OpenClaw desde ${startDir}.`);
 }
 
+function resolveRepoPath(repoRoot: string, value: string | undefined, fallbackName: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return path.join(repoRoot, fallbackName);
+  }
+
+  return path.isAbsolute(trimmed) ? trimmed : path.join(repoRoot, trimmed);
+}
+
 export function resolveRepoContext(startDir = process.cwd()): RepoContext {
   const appRoot = path.resolve(startDir);
   const repoRoot = findRepoRoot(appRoot);
@@ -51,6 +61,11 @@ export function resolveRepoContext(startDir = process.cwd()): RepoContext {
     appRoot,
     repoRoot,
     pythonPath: path.join(repoRoot, 'src'),
+    openclawProjectsDir: resolveRepoPath(
+      repoRoot,
+      process.env.OPENCLAW_PROJECTS_DIR,
+      'openclaw-projects'
+    ),
     studioDir,
     openclawStateDir: process.env.OPENCLAW_STATE_DIR || path.join(workHome, '.openclaw'),
     assets3dDir:

@@ -25,6 +25,10 @@ Traducir el contrato de dominio definido en
 Fuente unica de tipos:
 
 - `apps/openclaw-ui/src/lib/types/project.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/baseEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/sceneEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/shotEdition.ts`
+- `apps/openclaw-ui/src/lib/types/navigation/projectEdition/applicationServices.ts`
 
 Tipos base esperados por fases UI:
 
@@ -32,6 +36,15 @@ Tipos base esperados por fases UI:
 - trazabilidad: `OperationRef`, `ArtifactRef`
 - estado: `StageState`, `PipelineStage`, `ShotStage`, `SceneStage`, `ProjectStage`
 - handoff de toma: `ShotAssetBinding`
+
+Contratos de interaccion UI esperados por fases UI:
+
+- eventos UI tipados por comando minimo e identificador (`UiEventPointer`)
+- trazabilidad explicita de destino por servicio (`@service` y `target`)
+- separacion de lectura y escritura en contratos de aplicacion:
+  - queries: `ProjectNavigationQueryService`, `ProjectEditionQueryService`
+  - commands: `ProjectApplicationService`, `SceneApplicationService`,
+    `ShotApplicationService`, `AssetApplicationService`
 
 ## Review de tareas UI ya cerradas
 

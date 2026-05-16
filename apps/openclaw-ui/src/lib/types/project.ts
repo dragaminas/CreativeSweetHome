@@ -1,4 +1,4 @@
-export type AssetKind = 'character' | 'object';
+export type AssetKind = 'character' | 'object' | 'location';
 
 export type PipelineStage =
   | 'description'

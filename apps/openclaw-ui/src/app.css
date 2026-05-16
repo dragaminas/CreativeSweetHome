@@ -296,6 +296,41 @@ textarea {
   font-size: 0.9rem;
 }
 
+.nav-tree {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-tree-item {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.nav-branch {
+  display: grid;
+  gap: 0.35rem;
+  margin-left: 0.65rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(68, 50, 34, 0.16);
+}
+
+.nav-section-label {
+  padding: 0.25rem 0.4rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-link-compact {
+  padding: 0.48rem 0.58rem;
+  border-radius: 0.5rem;
+}
+
 .list {
   margin: 0;
   padding-left: 1.1rem;
@@ -431,7 +466,8 @@ textarea {
 }
 
 .scene-brief-form input,
-.scene-brief-form textarea {
+.scene-brief-form textarea,
+.scene-brief-form select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--line);
@@ -458,6 +494,71 @@ textarea {
 .scene-brief-form button[disabled] {
   opacity: 0.6;
   cursor: wait;
+}
+
+.seam-actions button {
+  border: 1px solid rgba(13, 107, 95, 0.25);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  padding: 0.62rem 0.92rem;
+  cursor: pointer;
+}
+
+.seam-actions button[disabled] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.workflow-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.project-nav-tree {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.seam-column {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.seam-column h3 {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+}
+
+.seam-group {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.seam-subgroup {
+  display: grid;
+  gap: 0.4rem;
+  margin-left: 0.8rem;
+}
+
+.seam-navigation button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.5rem 0.65rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.seam-navigation button.selected {
+  border-color: rgba(13, 107, 95, 0.4);
+  background: rgba(13, 107, 95, 0.12);
 }
 
 .fade-in {

@@ -1,0 +1,15 @@
+{
+  "id": "sh010",
+  "name": "Shot 010",
+  "description": "Nora enters the rainy alley.",
+  "order": 1,
+  "durationMs": 4800,
+  "frameRate": 24,
+  "locationId": "loc-alley",
+  "framing": {
+    "shotSize": "ms",
+    "cameraAngle": "eye",
+    "cameraMove": "dolly",
+    "lensMm": 35
+  }
+}

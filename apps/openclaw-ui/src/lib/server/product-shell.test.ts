@@ -27,6 +27,7 @@ describe('buildProductShell', () => {
 
     const kimodo = shell.workspaces.find((workspace) => workspace.id === 'kimodo');
     const comfyui = shell.workspaces.find((workspace) => workspace.id === 'comfyui');
+    const scene = shell.workspaces.find((workspace) => workspace.id === 'scene');
 
     expect(shell.workspaces.map((workspace) => workspace.id)).toEqual([
       'scene',
@@ -39,5 +40,8 @@ describe('buildProductShell', () => {
     expect(kimodo?.embedPath).toBe('/workspaces/kimodo/embed');
     expect(comfyui?.runnerIds).toContain('comfyui');
     expect(comfyui?.boundary).toMatch(/canvas general/i);
+    expect(scene?.stateLabel).toBe('Available');
+    expect(scene?.stateTone).toBe('positive');
+    expect(scene?.notes.join(' ')).toMatch(/scene brief/i);
   });
 });
