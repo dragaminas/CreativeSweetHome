@@ -47,6 +47,48 @@ scripts/apps/comfyui.sh open-ui
 bash scripts/apps/comfyui-trellis2-gguf-validation.sh
 ```
 
+## UI web: que probar hoy y como lanzarla
+
+Estado actual (phase `15-17`):
+
+- Shell web principal en `SvelteKit` con navegacion de workspaces.
+- Workspace de escena funcional:
+  - crear `scene brief` en `/workspaces/scene`
+  - crear scaffold de escena desde el brief en `/workspaces/scene`
+  - persiste evidencia real bajo `STUDIO_DIR/Scenes/...` y `STUDIO_DIR/Exports/...`
+- Bridge canonico visible desde la UI:
+  - `GET /api/runners`
+  - `POST /api/briefs/scene`
+  - `POST /api/scenes/scaffold`
+- Workspaces de `ComfyUI` y `Blender` muestran contrato/targets del runner.
+- Workspaces de `Kimodo` y `DaVinci Resolve` existen como seam de producto y contexto, no como flujo e2e cerrado todavia.
+
+Preparar dependencias UI (ruta canonica):
+
+```bash
+bash scripts/apps/install-ui-web-deps.sh audit
+bash scripts/apps/install-ui-web-deps.sh apply
+```
+
+Lanzar la UI local:
+
+```bash
+npm --prefix apps/openclaw-ui run dev -- --host 127.0.0.1 --port 4173
+```
+
+Abrir en navegador:
+
+- `http://127.0.0.1:4173/`
+- `http://127.0.0.1:4173/workspaces/scene`
+
+Smoke checks utiles:
+
+```bash
+npm --prefix apps/openclaw-ui run test:e2e -- --grep phase15-shell
+npm --prefix apps/openclaw-ui run test:e2e -- --grep phase16-scene-brief
+npm --prefix apps/openclaw-ui run test:e2e -- --grep phase17-scaffold
+```
+
 Instalacion y uso de Kimodo (opcional, diseno de movimiento):
 
 ```bash
