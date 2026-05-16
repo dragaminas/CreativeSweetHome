@@ -606,7 +606,7 @@ reproducible desde una accion de producto.
 ## Phase 18: Catalogacion de assets en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Permitir que la UI catalogue personajes y objetos como entidades reutilizables
@@ -616,20 +616,27 @@ del pipeline sin introducir una base de datos paralela en el MVP.
 El catalogo debe seguir siendo filesystem-first y manifest-driven, con estados,
 tags y evidencia sobre layouts ya existentes de `Assets3D/` y futuros
 directorios de referencias.
+La madurez de asset usa pipeline de 5 etapas (hasta benchmark/correccion),
+mientras el pipeline de 7 etapas queda para desarrollo de tomas/escenas.
 
 ### Stable Artifacts
 - [`UIPlan.md`](UIPlan.md)
 - [`../comfyui/3d-blender-bridge.md`](../comfyui/3d-blender-bridge.md)
 - [`../architecture/runner-interface.md`](../architecture/runner-interface.md)
+- [`../../apps/openclaw-ui/src/lib/server/asset-catalog.ts`](../../apps/openclaw-ui/src/lib/server/asset-catalog.ts)
+- [`../../apps/openclaw-ui/src/routes/api/assets/+server.ts`](../../apps/openclaw-ui/src/routes/api/assets/+server.ts)
+- [`../../apps/openclaw-ui/src/routes/workspaces/assets/+page.svelte`](../../apps/openclaw-ui/src/routes/workspaces/assets/+page.svelte)
 
 ### Reusable Infrastructure Produced
 - catalogo de assets basado en manifiestos
 - estados de asset legibles por la UI
+- separacion explicita entre madurez de asset y progreso de tomas/escenas
 - feedback de readiness para pasos posteriores
+- API REST para CRUD de assets
 
 ### Open Tasks
 - [`18.1`](tasks/18.1-ui-asset-catalog.md): implementar el catalogo de
-  personajes y objetos dentro del shell web
+  personajes y objetos dentro del shell web — `done`
 - [`18.2`](tasks/18.2-phase18-e2e-proof.md): probar una alta y actualizacion
   real de assets con evidencia revisable
 

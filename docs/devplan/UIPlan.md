@@ -76,6 +76,8 @@ Reglas de arquitectura y logica:
 - cada operacion debe dejar trazabilidad estable (`OperationRef`) y refs de
   artefacto (`ArtifactRef`) bajo rutas canonicas de `STUDIO_DIR`
 - la progresion de madurez de asset es secuencial:
+  `description -> reference_image -> model_3d -> default_benchmark_animation -> asset_correction_through_benchmark_animation`
+- el flujo de produccion de tomas/escenas conserva su progreso operativo:
   `description -> reference_image -> model_3d -> base_animation -> asset_animation -> animation_composition -> composition_render`
 - la capa de UI dispara solo eventos de intencion (`UiEventPointer`) con
   payload minimo por `id`; la logica compleja vive en servicios de aplicacion
