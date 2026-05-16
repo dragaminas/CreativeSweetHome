@@ -4,10 +4,8 @@ export type PipelineStage =
   | 'description'
   | 'reference_image'
   | 'model_3d'
-  | 'base_animation'
-  | 'asset_animation'
-  | 'animation_composition'
-  | 'composition_render';
+  | 'default_benchmark_animation'
+  | 'asset_correction_through_benchmark_animation';
 
 export type ShotStage =
   | 'shot_brief'

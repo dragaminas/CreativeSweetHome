@@ -143,10 +143,8 @@ function createAssetPipeline(): StageState<PipelineStage>[] {
     createStageState('description', 'ready'),
     createStageState('reference_image', 'pending'),
     createStageState('model_3d', 'pending'),
-    createStageState('base_animation', 'pending'),
-    createStageState('asset_animation', 'pending'),
-    createStageState('animation_composition', 'pending'),
-    createStageState('composition_render', 'pending')
+    createStageState('default_benchmark_animation', 'pending'),
+    createStageState('asset_correction_through_benchmark_animation', 'pending')
   ];
 }
 
