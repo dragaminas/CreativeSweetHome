@@ -92,6 +92,41 @@ for task_file in "${changed_task_files[@]}"; do
     printf 'missing:%s:%s\n' "$relative_task_path" 'dependency-section'
     failures=1
   fi
+
+  if rg -q '^`pending`$' "$task_file"; then
+    if ! rg -q '^## Scope Budget' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'scope-budget-section'
+      failures=1
+    fi
+
+    if ! rg -q '^## Microtask Breakdown$' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'microtask-breakdown-section'
+      failures=1
+    fi
+
+    microtask_lines="$(rg '^- \\[ \\] MT[0-9]+:' "$task_file" || true)"
+    if [[ -z "$microtask_lines" ]]; then
+      microtask_count=0
+    else
+      microtask_count="$(printf '%s\n' "$microtask_lines" | rg -c '^- \\[ \\] MT[0-9]+:')"
+    fi
+
+    if (( microtask_count < 3 || microtask_count > 9 )); then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'microtask-count-3-to-9'
+      failures=1
+    fi
+
+    if (( microtask_count > 0 )); then
+      invalid_microtask_lines="$(
+        printf '%s\n' "$microtask_lines" | rg -v 'files:.*verify:' || true
+      )"
+      if [[ -n "$invalid_microtask_lines" ]]; then
+        printf 'missing:%s:%s\n' "$relative_task_path" 'microtask-files-verify-format'
+        failures=1
+      fi
+    fi
+  fi
+
   if [[ "$task_file" =~ /docs/devplan/tasks/(15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33)\.[0-9] ]]; then
     if ! rg -q '^## Upstream Validation Gate$' "$task_file"; then
       printf 'missing:%s:%s\n' "$relative_task_path" 'upstream-validation-gate'

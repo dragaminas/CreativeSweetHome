@@ -89,6 +89,18 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Cada tarea activa debe incluir una seccion `Canonical Docs to Update`.
 - Si una tarea esta bloqueada, el bloqueo debe quedar explicito y basado en el
   estado real del repo o del entorno.
+- Las tareas nuevas o modificadas con estado `pending` deben incluir un budget
+  explicito de alcance (`Scope Budget`) para limitar desviaciones de ejecucion
+  con agentes locales.
+- Ese budget debe declarar al menos: superficie principal, maximo de archivos,
+  maximo de areas de codigo y trigger de split obligatorio.
+- Las tareas nuevas o modificadas con estado `pending` deben incluir
+  `Microtask Breakdown` con slices verticales pequenos y verificables.
+- Cada microtarea debe declarar, en la misma linea, rutas objetivo (`files:`) y
+  comando de verificacion (`verify:`).
+- Si una task `pending` requiere mezclar varias superficies principales
+  (ejemplo: backend + UI + e2e + dependencias), debe dividirse en tareas hoja
+  hermanas antes de implementarse.
 
 ## Invariantes del template de tareas
 
@@ -112,6 +124,9 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   - `## Verification`
   - `## Expected Evidence`
   - `## Acceptance Criteria`
+- Para task files `pending` nuevas o modificadas tambien son obligatorias:
+  - `## Scope Budget`
+  - `## Microtask Breakdown`
 - Cada task file nueva o modificada debe incluir una seccion explicita de
   dependencia (`Dependency Provisioning`, `Dependency Path` o
   `Planned Dependency Path`) siguiendo las reglas de dependencia ya definidas
@@ -132,6 +147,8 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   y smoke/integration segun aplique.
 - `Expected Evidence` debe declarar salida esperada, evidencia/log esperado y
   estado esperado de forma revisable.
+- `Microtask Breakdown` debe contener entre `3` y `9` microtareas checklist,
+  cada una con `files:` y `verify:` en formato legible por humano y validador.
 
 ## Reglas de descomposicion de fases
 

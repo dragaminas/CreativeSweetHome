@@ -97,6 +97,12 @@ Constraints:
 - if Scope is `new phase` or phase-level refinement and dependency
   provisioning is not already fully covered by an existing repo script, create
   a dedicated leaf task for dependency installation/audit in the same change
+- every new or updated `pending` task file must include:
+  - `## Scope Budget` with explicit limits (primary surface, max files, max areas, split trigger)
+  - `## Microtask Breakdown` with `3-9` checklist items
+  - each microtask line must include `files:` and `verify:`
+- if proposed work exceeds the declared `Scope Budget`, split into sibling task
+  files in the same planning change instead of enlarging one task
 - do not leave a phase with only planning plus e2e-proof tasks when its
   dependency-provisioning path is still unresolved
 - do not leave `active` or `pending` phases with placeholder open tasks

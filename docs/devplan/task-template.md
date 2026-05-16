@@ -34,6 +34,13 @@ Phase <N>: <nombre de fase>
 ## Minimal Context
 <contexto minimo para ejecutar sin releer todo el repo>
 
+## Scope Budget (Roo/Qwen)
+- Primary surface: `<backend_contract | ui_integration | dependency_install | e2e_proof | docs_only>`
+- Max changed files: `<3-7>`
+- Max code areas: `<1-2 modulos>` (ejemplo: `runner + tests`, `ui route + adapter`)
+- Out-of-scope guardrail: `<que NO debe entrar en esta task>`
+- Split trigger: si para cerrar la task hay que exceder este budget, detenerse y crear task(s) hermana(s) antes de continuar.
+
 ## Files to Inspect First
 - `<ruta/de/archivo_1>`
 - `<ruta/de/archivo_2>`
@@ -58,6 +65,12 @@ Phase <N>: <nombre de fase>
 - <cambio 1>
 - <cambio 2>
 - <cambio 3>
+
+## Microtask Breakdown
+- [ ] MT1: <vertical slice 1>. files: `<rutas concretas>`. verify: `<comando concreto>`.
+- [ ] MT2: <vertical slice 2>. files: `<rutas concretas>`. verify: `<comando concreto>`.
+- [ ] MT3: <vertical slice 3>. files: `<rutas concretas>`. verify: `<comando concreto>`.
+- [ ] MT4: <opcional si aplica>. files: `<rutas concretas>`. verify: `<comando concreto>`.
 
 ## Deliverables
 - `<ruta/de/archivo_objetivo_1>`
