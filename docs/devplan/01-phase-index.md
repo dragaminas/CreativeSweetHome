@@ -454,8 +454,9 @@ pueden servir solo como comparativa, no como ruta core.
   `blocked_*` para rigging humanoide automatico
 
 ### Open Tasks
-- [`14.2`](tasks/14.2-phase14-e2e-proof.md): reservar y ejecutar despues la
-  prueba end-to-end real de la fase `14` como gate de cierre
+- [`14.2`](tasks/14.2-phase14-e2e-proof.md): prueba e2e ejecutada en
+  `blocked` por ausencia del target canonico `create_rig_humanoid`; mantener
+  como gate de cierre hasta implementar runner + validacion automatica de poses
 
 ## Phase 15: Producto UI web con SvelteKit y workspaces embebidos
 
