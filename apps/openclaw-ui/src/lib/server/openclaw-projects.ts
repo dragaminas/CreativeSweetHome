@@ -77,6 +77,54 @@ interface RelationManifest {
   assets: Record<string, { kind: AssetKind; sceneIds: string[]; shotIds: string[] }>;
 }
 
+interface SceneBriefManifest {
+  projectId?: string;
+  sceneId?: string;
+  source?: {
+    intent?: string;
+    narrative?: string;
+  };
+}
+
+interface SceneStorageManifest {
+  projectId?: string;
+  sceneId?: string;
+  initialShotId?: string;
+}
+
+interface SceneAssetsIndexManifest {
+  schemaVersion?: number;
+  projectId?: string;
+  sceneId?: string;
+  shotOrder?: string[];
+  assetOrder?: {
+    characters?: string[];
+    objects?: string[];
+    locations?: string[];
+  };
+  shots?: Record<string, { assetIds?: string[]; locationIds?: string[] }>;
+  assets?: Record<string, { kind?: AssetKind; sceneIds?: string[]; shotIds?: string[] }>;
+}
+
+interface ShotStorageManifest {
+  shotId?: string;
+  status?: string;
+}
+
+interface CatalogAssetEntry {
+  assetId: string;
+  label?: string;
+  description?: string;
+  stage?: PipelineStage;
+  stageState?: 'pending' | 'in_progress' | 'ready' | 'failed';
+  tags?: string[];
+}
+
+interface AssetCatalogManifest {
+  kind?: AssetKind;
+  assets?: CatalogAssetEntry[];
+}
+
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.access(targetPath);
@@ -146,6 +194,73 @@ function createAssetPipeline(): StageState<PipelineStage>[] {
     createStageState('default_benchmark_animation', 'pending'),
     createStageState('asset_correction_through_benchmark_animation', 'pending')
   ];
+}
+
+function titleFromSlug(raw: string): string {
+  return raw
+    .split('-')
+    .filter(Boolean)
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(' ');
+}
+
+function toStageStatus(
+  stageState: CatalogAssetEntry['stageState'] | undefined
+): StageState<PipelineStage>['status'] {
+  if (stageState === 'ready') {
+    return 'ready';
+  }
+  if (stageState === 'in_progress') {
+    return 'running';
+  }
+  if (stageState === 'failed') {
+    return 'failed';
+  }
+  return 'pending';
+}
+
+function createAssetPipelineFromCatalog(entry: CatalogAssetEntry): StageState<PipelineStage>[] {
+  const pipeline = createAssetPipeline();
+  const stage = entry.stage ?? 'description';
+  const stageIndex = pipeline.findIndex((item) => item.stage === stage);
+  const targetIndex = stageIndex === -1 ? 0 : stageIndex;
+
+  for (let index = 0; index < targetIndex; index += 1) {
+    pipeline[index] = {
+      ...pipeline[index],
+      status: 'ready'
+    };
+  }
+
+  pipeline[targetIndex] = {
+    ...pipeline[targetIndex],
+    status: toStageStatus(entry.stageState)
+  };
+
+  if (pipeline[0]) {
+    pipeline[0] = {
+      ...pipeline[0],
+      status: pipeline[0].status === 'pending' ? 'ready' : pipeline[0].status
+    };
+  }
+
+  return pipeline;
+}
+
+function createScenePipelineFromStorage(
+  hasBrief: boolean,
+  hasScaffold: boolean
+): StageState<SceneStage>[] {
+  const pipeline = createScenePipeline();
+  pipeline[0] = {
+    ...pipeline[0],
+    status: hasBrief ? 'ready' : 'pending'
+  };
+  pipeline[1] = {
+    ...pipeline[1],
+    status: hasScaffold ? 'ready' : 'pending'
+  };
+  return pipeline;
 }
 
 function nowIso(value?: Date): string {
@@ -385,6 +500,403 @@ async function loadProjectSnapshot(
   };
 }
 
+async function listDirectoryNames(rootDir: string): Promise<string[]> {
+  if (!(await pathExists(rootDir))) {
+    return [];
+  }
+
+  const entries = await fs.readdir(rootDir, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+}
+
+function uniqueIds(values: Array<string | undefined>): string[] {
+  const unique = new Set<string>();
+  for (const value of values) {
+    if (!value) {
+      continue;
+    }
+    unique.add(value);
+  }
+  return Array.from(unique);
+}
+
+function sceneNameFromBrief(
+  sceneId: string,
+  sceneBrief: SceneBriefManifest | null
+): string {
+  const intent = sceneBrief?.source?.intent?.trim();
+  if (intent) {
+    return intent;
+  }
+  return titleFromSlug(sceneId) || sceneId;
+}
+
+function projectNameFromId(projectId: string): string {
+  const normalized = titleFromSlug(projectId);
+  return normalized || projectId;
+}
+
+async function readAssetCatalogEntries(
+  sceneRoot: string,
+  kind: AssetKind
+): Promise<CatalogAssetEntry[]> {
+  const manifestPath = path.join(sceneRoot, 'manifests', `${kind}-catalog.json`);
+  const manifest = await readJsonFile<AssetCatalogManifest>(manifestPath);
+  if (!manifest || !Array.isArray(manifest.assets)) {
+    return [];
+  }
+
+  return manifest.assets;
+}
+
+function buildLocationAsset(
+  projectId: string,
+  sceneId: string,
+  locationId: string,
+  stamp: string
+): AssetDefinition {
+  return {
+    id: locationId,
+    name: titleFromSlug(locationId) || locationId,
+    description: 'Location referenced from scene relation index.',
+    createdAt: stamp,
+    updatedAt: stamp,
+    projectId,
+    sceneId,
+    kind: 'location',
+    tags: ['location'],
+    artifacts: [],
+    operations: [],
+    pipeline: createAssetPipeline()
+  };
+}
+
+function buildLocation(projectId: string, sceneId: string, locationId: string, stamp: string): Location {
+  return {
+    id: locationId,
+    name: titleFromSlug(locationId) || locationId,
+    description: 'Scene location loaded from canonical scene manifests.',
+    createdAt: stamp,
+    updatedAt: stamp,
+    projectId,
+    sceneId,
+    setAssetIds: [],
+    zones: [],
+    constraints: [],
+    artifacts: []
+  };
+}
+
+async function loadStudioProjectSnapshots(
+  studioDir: string,
+  stamp: string,
+  warnings: string[]
+): Promise<DomainSnapshot[]> {
+  const scenesRoot = path.join(studioDir, 'Scenes');
+  const projectIds = await listDirectoryNames(scenesRoot);
+  const snapshots: DomainSnapshot[] = [];
+
+  for (const projectId of projectIds) {
+    const projectRoot = path.join(scenesRoot, projectId);
+    const sceneIds = await listDirectoryNames(projectRoot);
+    if (sceneIds.length === 0) {
+      continue;
+    }
+
+    const scenes: Scene[] = [];
+    const shotsById = new Map<string, Shot>();
+    const assetsById = new Map<string, AssetDefinition>();
+    const locationsById = new Map<string, Location>();
+
+    for (const sceneId of sceneIds) {
+      const sceneRoot = path.join(projectRoot, sceneId);
+      const sceneBrief = await readJsonFile<SceneBriefManifest>(
+        path.join(sceneRoot, 'briefs', 'scene-brief.json')
+      );
+      const sceneStorage = await readJsonFile<SceneStorageManifest>(
+        path.join(sceneRoot, 'manifests', 'scene-storage.json')
+      );
+      const assetsIndex = await readJsonFile<SceneAssetsIndexManifest>(
+        path.join(sceneRoot, 'manifests', 'assets.json')
+      );
+
+      const shotDirs = await listDirectoryNames(path.join(sceneRoot, 'shots'));
+      const manifestShotOrder = assetsIndex?.shotOrder ?? [];
+      const shotIds = uniqueIds([...manifestShotOrder, ...shotDirs, sceneStorage?.initialShotId]);
+
+      const indexedSceneAssetIds = uniqueIds([
+        ...(assetsIndex?.assetOrder?.characters ?? []),
+        ...(assetsIndex?.assetOrder?.objects ?? []),
+        ...(assetsIndex?.assetOrder?.locations ?? [])
+      ]);
+      const indexedLocationIds = uniqueIds([
+        ...(assetsIndex?.assetOrder?.locations ?? []),
+        ...Object.values(assetsIndex?.shots ?? {}).flatMap((shot) => shot.locationIds ?? [])
+      ]);
+
+      for (const shotId of shotIds) {
+        const shotManifest = await readJsonFile<ShotStorageManifest>(
+          path.join(sceneRoot, 'shots', shotId, 'manifests', 'shot.json')
+        );
+        const shotIndex = assetsIndex?.shots?.[shotId];
+        const shotAssetIds = uniqueIds([
+          ...(shotIndex?.assetIds ?? []),
+          ...(shotIndex?.locationIds ?? [])
+        ]);
+
+        shotsById.set(shotId, {
+          id: shotId,
+          name: `Shot ${shotId.toUpperCase()}`,
+          description: shotManifest?.status
+            ? `Shot status: ${shotManifest.status}`
+            : 'Shot loaded from canonical scene manifests.',
+          createdAt: stamp,
+          updatedAt: stamp,
+          projectId,
+          sceneId,
+          locationId: shotIndex?.locationIds?.[0] ?? indexedLocationIds[0] ?? '',
+          order: manifestShotOrder.indexOf(shotId) >= 0 ? manifestShotOrder.indexOf(shotId) + 1 : 1,
+          durationMs: 4000,
+          frameRate: 24,
+          framing: coalesceFraming(undefined),
+          assetBindings: shotAssetIds.map((assetId) => ({
+            assetId,
+            role: 'primary',
+            requiredStage: 'model_3d',
+            actions: []
+          })),
+          artifacts: [],
+          operations: [],
+          pipeline: createShotPipeline()
+        });
+      }
+
+      const characterEntries = await readAssetCatalogEntries(sceneRoot, 'character');
+      const objectEntries = await readAssetCatalogEntries(sceneRoot, 'object');
+
+      for (const [kind, entries] of [
+        ['character', characterEntries],
+        ['object', objectEntries]
+      ] as const) {
+        for (const entry of entries) {
+          if (!entry.assetId) {
+            continue;
+          }
+          assetsById.set(entry.assetId, {
+            id: entry.assetId,
+            name: entry.label?.trim() || entry.assetId,
+            description: entry.description?.trim() || '',
+            createdAt: stamp,
+            updatedAt: stamp,
+            projectId,
+            sceneId,
+            kind,
+            tags: entry.tags ?? [],
+            artifacts: [],
+            operations: [],
+            pipeline: createAssetPipelineFromCatalog(entry)
+          });
+        }
+      }
+
+      for (const locationId of indexedLocationIds) {
+        if (!assetsById.has(locationId)) {
+          assetsById.set(locationId, buildLocationAsset(projectId, sceneId, locationId, stamp));
+        }
+        if (!locationsById.has(locationId)) {
+          locationsById.set(locationId, buildLocation(projectId, sceneId, locationId, stamp));
+        }
+      }
+
+      const sceneShotIds = shotIds.filter((shotId) => shotsById.has(shotId));
+      const sceneAssetIds = uniqueIds([
+        ...indexedSceneAssetIds,
+        ...characterEntries.map((entry) => entry.assetId),
+        ...objectEntries.map((entry) => entry.assetId),
+        ...indexedLocationIds
+      ]).filter((assetId) => assetsById.has(assetId));
+
+      scenes.push({
+        id: sceneId,
+        name: sceneNameFromBrief(sceneId, sceneBrief),
+        description:
+          sceneBrief?.source?.narrative?.trim() || 'Scene loaded from canonical scene manifests.',
+        createdAt: stamp,
+        updatedAt: stamp,
+        projectId,
+        scriptId: 'script-main',
+        shotIds: sceneShotIds,
+        locationIds: indexedLocationIds,
+        assetIds: sceneAssetIds,
+        artifacts: [],
+        operations: [],
+        pipeline: createScenePipelineFromStorage(Boolean(sceneBrief), Boolean(sceneStorage || assetsIndex))
+      });
+    }
+
+    if (scenes.length === 0) {
+      warnings.push(
+        `Project ${projectId} has no scene manifests under ${path.join(scenesRoot, projectId)}.`
+      );
+      continue;
+    }
+
+    const orderedSceneIds = scenes.map((scene) => scene.id);
+    const orderedShots = Array.from(shotsById.values()).filter((shot) =>
+      orderedSceneIds.includes(shot.sceneId)
+    );
+    const orderedAssets = Array.from(assetsById.values());
+    const orderedLocations = Array.from(locationsById.values());
+
+    const project: Project = {
+      id: projectId,
+      name: projectNameFromId(projectId),
+      description: `Project loaded from ${path.join(studioDir, 'Scenes', projectId)}.`,
+      createdAt: stamp,
+      updatedAt: stamp,
+      scriptIds: ['script-main'],
+      sceneIds: orderedSceneIds,
+      assetIds: orderedAssets.map((asset) => asset.id),
+      locationIds: orderedLocations.map((location) => location.id),
+      pipeline: createProjectPipeline()
+    };
+
+    snapshots.push({
+      project,
+      scripts: [defaultScript(project.id, stamp)],
+      scenes,
+      shots: orderedShots,
+      assets: orderedAssets,
+      locations: orderedLocations
+    });
+  }
+
+  return snapshots;
+}
+
+function relationFromSnapshot(snapshot: DomainSnapshot): RelationManifest {
+  const characterIds = snapshot.assets
+    .filter((asset) => asset.kind === 'character')
+    .map((asset) => asset.id);
+  const objectIds = snapshot.assets
+    .filter((asset) => asset.kind === 'object')
+    .map((asset) => asset.id);
+  const locationIds = snapshot.assets
+    .filter((asset) => asset.kind === 'location')
+    .map((asset) => asset.id);
+
+  const scenes: RelationManifest['scenes'] = {};
+  for (const scene of snapshot.scenes) {
+    scenes[scene.id] = {
+      shotOrder: scene.shotIds,
+      assetIds: scene.assetIds,
+      locationIds: scene.locationIds
+    };
+  }
+
+  const shots: RelationManifest['shots'] = {};
+  for (const shot of snapshot.shots) {
+    shots[shot.id] = {
+      sceneId: shot.sceneId,
+      assetIds: shot.assetBindings.map((binding) => binding.assetId)
+    };
+  }
+
+  const assets: RelationManifest['assets'] = {};
+  for (const asset of snapshot.assets) {
+    const sceneIds = snapshot.scenes
+      .filter((scene) => scene.assetIds.includes(asset.id))
+      .map((scene) => scene.id);
+    const shotIds = snapshot.shots
+      .filter((shot) => shot.assetBindings.some((binding) => binding.assetId === asset.id))
+      .map((shot) => shot.id);
+    assets[asset.id] = {
+      kind: asset.kind,
+      sceneIds,
+      shotIds
+    };
+  }
+
+  return {
+    schemaVersion: 1,
+    projectId: snapshot.project.id,
+    sceneOrder: snapshot.project.sceneIds,
+    assetOrder: {
+      characters: characterIds,
+      objects: objectIds,
+      locations: locationIds
+    },
+    scenes,
+    shots,
+    assets
+  };
+}
+
+async function reconcileOpenClawProjectionFromSnapshots(
+  rootDir: string,
+  snapshots: DomainSnapshot[],
+  warnings: string[]
+): Promise<void> {
+  for (const snapshot of snapshots) {
+    const projectDir = path.join(rootDir, snapshot.project.id);
+    const relations = relationFromSnapshot(snapshot);
+
+    await writeJson(path.join(projectDir, 'project.json'), {
+      id: snapshot.project.id,
+      name: snapshot.project.name,
+      description: snapshot.project.description,
+      scriptIds: snapshot.project.scriptIds
+    });
+
+    await writeJson(path.join(projectDir, 'relations.json'), relations);
+
+    for (const scene of snapshot.scenes) {
+      await writeJson(path.join(projectDir, 'scenes', scene.id, 'scene.json'), {
+        id: scene.id,
+        name: scene.name,
+        description: scene.description,
+        scriptId: scene.scriptId
+      });
+    }
+
+    for (const shot of snapshot.shots) {
+      await writeJson(path.join(projectDir, 'scenes', shot.sceneId, 'shots', shot.id, 'shot.json'), {
+        id: shot.id,
+        name: shot.name,
+        description: shot.description,
+        order: shot.order,
+        durationMs: shot.durationMs,
+        frameRate: shot.frameRate,
+        locationId: shot.locationId,
+        framing: shot.framing
+      });
+    }
+
+    for (const asset of snapshot.assets) {
+      await writeJson(
+        path.join(projectDir, 'assets', `${asset.kind}s`, asset.id, 'asset.json'),
+        {
+          id: asset.id,
+          name: asset.name,
+          description: asset.description,
+          kind: asset.kind,
+          tags: asset.tags
+        }
+      );
+    }
+  }
+
+  const projectedProjectIds = new Set(snapshots.map((snapshot) => snapshot.project.id));
+  const legacyProjectIds = await listDirectoryNames(rootDir);
+  for (const legacyProjectId of legacyProjectIds) {
+    if (!projectedProjectIds.has(legacyProjectId)) {
+      warnings.push(
+        `Legacy projection ${legacyProjectId} has no matching canonical data under STUDIO_DIR/Scenes.`
+      );
+    }
+  }
+}
+
 export async function seedDefaultOpenClawProjectTree(rootDir: string, now = new Date()): Promise<void> {
   const stamp = nowIso(now);
   const projectDir = path.join(rootDir, 'pilot-project');
@@ -485,6 +997,17 @@ export async function loadOpenClawProjectSnapshots(
   const rootDir = options.projectsDir ?? context.openclawProjectsDir;
   const warnings: string[] = [];
   const stamp = nowIso(options.now);
+  const studioSnapshots = await loadStudioProjectSnapshots(context.studioDir, stamp, warnings);
+
+  if (studioSnapshots.length > 0) {
+    await fs.mkdir(rootDir, { recursive: true });
+    await reconcileOpenClawProjectionFromSnapshots(rootDir, studioSnapshots, warnings);
+    return {
+      rootDir,
+      snapshots: studioSnapshots,
+      warnings
+    };
+  }
 
   if (!(await pathExists(rootDir))) {
     if (options.seedIfMissing) {
