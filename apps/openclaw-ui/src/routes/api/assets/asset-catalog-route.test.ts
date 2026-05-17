@@ -214,4 +214,99 @@ describe('asset catalog route', () => {
       }
     }
   });
+
+  it('keeps scene relation index synced in assets.json after create/delete', async () => {
+    const previousStudioDir = process.env.STUDIO_DIR;
+    const tempStudioDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-assets-route-rel-'));
+    process.env.STUDIO_DIR = tempStudioDir;
+
+    const projectId = 'pilot-feature';
+    const sceneId = 'opening-alley';
+    const assetsIndexPath = path.join(
+      tempStudioDir,
+      'Scenes',
+      projectId,
+      sceneId,
+      'manifests',
+      'assets.json'
+    );
+
+    try {
+      await fs.mkdir(path.dirname(assetsIndexPath), { recursive: true });
+      await fs.writeFile(
+        assetsIndexPath,
+        `${JSON.stringify(
+          {
+            schemaVersion: 2,
+            projectId,
+            sceneId,
+            shotOrder: ['sh010'],
+            assetOrder: {
+              characters: [],
+              objects: [],
+              locations: []
+            },
+            shots: {
+              sh010: {
+                assetIds: [],
+                locationIds: []
+              }
+            },
+            assets: {}
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      );
+
+      const createResponse = await POST({
+        request: new Request('http://localhost/api/assets', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create',
+            projectId,
+            sceneId,
+            kind: 'character',
+            label: 'Nora'
+          })
+        })
+      } as never);
+
+      expect(createResponse.status).toBe(201);
+      const createPayload = (await createResponse.json()) as { assetId: string };
+
+      const relationAfterCreate = JSON.parse(await fs.readFile(assetsIndexPath, 'utf8')) as {
+        assetOrder: { characters: string[] };
+        assets: Record<string, { kind: string; sceneIds: string[]; shotIds: string[] }>;
+      };
+      expect(relationAfterCreate.assetOrder.characters).toContain(createPayload.assetId);
+      expect(relationAfterCreate.assets[createPayload.assetId]).toMatchObject({
+        kind: 'character',
+        sceneIds: [sceneId]
+      });
+
+      const deleteResponse = await DELETE({
+        url: new URL(
+          `http://localhost/api/assets?projectId=${projectId}&sceneId=${sceneId}&kind=character&assetId=${createPayload.assetId}`
+        ),
+        request: new Request('http://localhost/api/assets', { method: 'DELETE' })
+      } as never);
+      expect(deleteResponse.status).toBe(200);
+
+      const relationAfterDelete = JSON.parse(await fs.readFile(assetsIndexPath, 'utf8')) as {
+        assetOrder: { characters: string[] };
+        assets: Record<string, unknown>;
+      };
+      expect(relationAfterDelete.assetOrder.characters).not.toContain(createPayload.assetId);
+      expect(relationAfterDelete.assets[createPayload.assetId]).toBeUndefined();
+    } finally {
+      if (previousStudioDir === undefined) {
+        delete process.env.STUDIO_DIR;
+      } else {
+        process.env.STUDIO_DIR = previousStudioDir;
+      }
+    }
+  });
 });

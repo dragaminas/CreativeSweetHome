@@ -109,6 +109,20 @@ interface CatalogManifestShape {
   updatedAt: string;
 }
 
+interface SceneAssetsIndexManifest {
+  schemaVersion?: number;
+  projectId?: string;
+  sceneId?: string;
+  shotOrder?: string[];
+  assetOrder?: {
+    characters?: string[];
+    objects?: string[];
+    locations?: string[];
+  };
+  shots?: Record<string, { assetIds?: string[]; locationIds?: string[] }>;
+  assets?: Record<string, { kind?: AssetKind | 'location'; sceneIds?: string[]; shotIds?: string[] }>;
+}
+
 const LEGACY_STAGE_MAP: Record<string, AssetStage> = {
   description: 'description',
   reference_image: 'reference_image',
@@ -137,6 +151,10 @@ function slugify(value: string): string {
 function sanitizeId(value: string | undefined, fallback: string): string {
   const normalized = slugify(value || '');
   return normalized || fallback;
+}
+
+function uniqueIds(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 function generateAssetId(kind: AssetKind, index: number): string {
@@ -285,6 +303,111 @@ function catalogPath(
     'manifests',
     `${kind}-catalog.json`
   );
+}
+
+function assetStorageDirForKind(kind: AssetKind): 'characters' | 'objects' {
+  return kind === 'character' ? 'characters' : 'objects';
+}
+
+function sceneAssetsIndexPath(projectId: string, sceneId: string, studioDir?: string): string {
+  const context = resolveRepoContext();
+  const baseDir = studioDir || context.studioDir;
+  return path.join(baseDir, 'Scenes', projectId, sceneId, 'manifests', 'assets.json');
+}
+
+async function readSceneAssetsIndex(
+  projectId: string,
+  sceneId: string
+): Promise<SceneAssetsIndexManifest | null> {
+  const manifestPath = sceneAssetsIndexPath(projectId, sceneId);
+  if (!(await pathExists(manifestPath))) {
+    return null;
+  }
+
+  try {
+    const raw = await fs.readFile(manifestPath, 'utf8');
+    return JSON.parse(raw) as SceneAssetsIndexManifest;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSceneAssetsIndex(
+  projectId: string,
+  sceneId: string,
+  manifest: SceneAssetsIndexManifest
+): Promise<void> {
+  const manifestPath = sceneAssetsIndexPath(projectId, sceneId);
+  await fs.mkdir(path.dirname(manifestPath), { recursive: true });
+  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+}
+
+async function syncSceneAssetsIndexAfterCreate(
+  projectId: string,
+  sceneId: string,
+  kind: AssetKind,
+  assetId: string
+): Promise<void> {
+  const relation = await readSceneAssetsIndex(projectId, sceneId);
+  if (!relation) {
+    return;
+  }
+
+  const assetOrder = relation.assetOrder || {};
+  const characters = new Set(assetOrder.characters ?? []);
+  const objects = new Set(assetOrder.objects ?? []);
+
+  if (kind === 'character') {
+    characters.add(assetId);
+  } else {
+    objects.add(assetId);
+  }
+
+  relation.assetOrder = {
+    characters: Array.from(characters),
+    objects: Array.from(objects),
+    locations: assetOrder.locations ?? []
+  };
+
+  relation.assets = relation.assets || {};
+  relation.assets[assetId] = {
+    kind,
+    sceneIds: uniqueIds([...(relation.assets[assetId]?.sceneIds ?? []), sceneId]),
+    shotIds: uniqueIds(relation.assets[assetId]?.shotIds ?? [])
+  };
+
+  await writeSceneAssetsIndex(projectId, sceneId, relation);
+}
+
+async function syncSceneAssetsIndexAfterDelete(
+  projectId: string,
+  sceneId: string,
+  kind: AssetKind,
+  assetId: string
+): Promise<void> {
+  const relation = await readSceneAssetsIndex(projectId, sceneId);
+  if (!relation) {
+    return;
+  }
+
+  const assetOrder = relation.assetOrder || {};
+  relation.assetOrder = {
+    characters: (assetOrder.characters ?? []).filter((entry) => entry !== assetId),
+    objects: (assetOrder.objects ?? []).filter((entry) => entry !== assetId),
+    locations: assetOrder.locations ?? []
+  };
+
+  if (relation.shots) {
+    for (const shot of Object.values(relation.shots)) {
+      shot.assetIds = (shot.assetIds ?? []).filter((entry) => entry !== assetId);
+    }
+  }
+
+  if (relation.assets) {
+    delete relation.assets[assetId];
+  }
+
+  await writeSceneAssetsIndex(projectId, sceneId, relation);
 }
 
 export async function listAssets(
@@ -455,7 +578,7 @@ export async function createAsset(
       projectId,
       sceneId,
       'assets',
-      kind,
+      assetStorageDirForKind(kind),
       `${assetId}.json`
     ),
     createdAt: now,
@@ -467,6 +590,7 @@ export async function createAsset(
   catalog.updatedAt = now;
 
   await writeCatalogManifest(manifestPath, catalog);
+  await syncSceneAssetsIndexAfterCreate(projectId, sceneId, kind, assetId);
 
   return {
     status: 'created',
@@ -617,6 +741,7 @@ export async function deleteAsset(
   catalog.updatedAt = now;
 
   await writeCatalogManifest(manifestPath, catalog);
+  await syncSceneAssetsIndexAfterDelete(projectId, sceneId, kind, assetId);
 
   return {
     status: 'deleted',
