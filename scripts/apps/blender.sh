@@ -116,7 +116,17 @@ PY
     "$BLENDER_BIN" --background --factory-startup \
       --python "$helper_py" -- "$config_json"
     ;;
+  create-rig-humanoid)
+    config_json="${2:-}"
+    helper_py="$SCRIPT_DIR/blender_create_rig_humanoid.py"
+    [[ -n "$config_json" ]] || die "Debes indicar el archivo JSON de configuracion"
+    [[ -f "$config_json" ]] || die "No existe el archivo de configuracion: $config_json"
+    [[ -x "$BLENDER_BIN" ]] || die "Blender no esta disponible"
+    [[ -f "$helper_py" ]] || die "No existe el helper: $helper_py"
+    "$BLENDER_BIN" --background --factory-startup \
+      --python "$helper_py" -- "$config_json"
+    ;;
   *)
-    die "Uso: $0 [status|new-project <nombre>|open-project <archivo.blend>|smoke-test <nombre>|rigging-smoke-test <nombre|dir> [audit|apply]|pre-rig-cleanup <config.json>]"
+    die "Uso: $0 [status|new-project <nombre>|open-project <archivo.blend>|smoke-test <nombre>|rigging-smoke-test <nombre|dir> [audit|apply]|pre-rig-cleanup <config.json>|create-rig-humanoid <config.json>]"
     ;;
 esac

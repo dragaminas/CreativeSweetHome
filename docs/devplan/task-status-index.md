@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `76`
 - `archived`: `10`
 - `blocked`: `2`
-- `done`: `21`
-- `pending`: `43`
+- `done`: `22`
+- `pending`: `42`
 
 ## Tasks
 
@@ -37,7 +37,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `13.3` Prueba end-to-end de Phase 13 | `13` Cleanup 3D pre-rigging con Blender e Instant Meshes | `done` | [docs/devplan/tasks/13.3-phase13-e2e-proof.md](docs/devplan/tasks/13.3-phase13-e2e-proof.md) |
 | `14.1` Plan de rigging humanoide Linux-first con Blender y Rigify | `14` Rigging humanoide automatizado con Blender y Rigify | `done` | [docs/devplan/tasks/14.1-blender-rigify-humanoid-rigging-plan.md](docs/devplan/tasks/14.1-blender-rigify-humanoid-rigging-plan.md) |
 | `14.1.1` Instalacion de dependencias de Phase 14 | `14` Rigging humanoide automatizado con Blender y Rigify | `done` | [docs/devplan/tasks/14.1.1-phase14-dependency-installation.md](docs/devplan/tasks/14.1.1-phase14-dependency-installation.md) |
-| `14.1.2` Target canonico `create_rig_humanoid` en runner Blender | `14` Rigging humanoide automatizado con Blender y Rigify | `pending` | [docs/devplan/tasks/14.1.2-phase14-create-rig-runner-target.md](docs/devplan/tasks/14.1.2-phase14-create-rig-runner-target.md) |
+| `14.1.2` Target canonico `create_rig_humanoid` en runner Blender | `14` Rigging humanoide automatizado con Blender y Rigify | `done` | [docs/devplan/tasks/14.1.2-phase14-create-rig-runner-target.md](docs/devplan/tasks/14.1.2-phase14-create-rig-runner-target.md) |
 | `14.2` Prueba end-to-end de Phase 14 | `14` Rigging humanoide automatizado con Blender y Rigify | `blocked` | [docs/devplan/tasks/14.2-phase14-e2e-proof.md](docs/devplan/tasks/14.2-phase14-e2e-proof.md) |
 | `15.1` Shell de producto con SvelteKit y workspaces embebidos | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.1-sveltekit-product-shell-and-embedded-workspaces.md](docs/devplan/tasks/15.1-sveltekit-product-shell-and-embedded-workspaces.md) |
 | `15.1.1` Instalacion de dependencias de Phase 15 | `15` Producto UI web con SvelteKit y workspaces embebidos | `done` | [docs/devplan/tasks/15.1.1-phase15-dependency-installation.md](docs/devplan/tasks/15.1.1-phase15-dependency-installation.md) |

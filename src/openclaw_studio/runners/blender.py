@@ -25,8 +25,10 @@ from .contracts import (
 
 RUNNER_ID = "blender"
 TARGET_ID_CLEANUP_PRE_RIG = "cleanup_pre_rig_humanoid"
+TARGET_ID_CREATE_RIG_HUMANOID = "create_rig_humanoid"
 SUPPORTED_SOURCE_EXTENSIONS = {".fbx", ".glb", ".gltf", ".obj", ".ply", ".stl"}
 SUPPORTED_MODES = {"auto", "debug"}
+POSE_SUITE_BASIC_HUMANOID = ("arms", "elbows", "knees", "head", "torso")
 
 
 def utc_now() -> str:
@@ -85,6 +87,29 @@ class CleanupPaths:
     instant_stderr_log_path: Path
 
 
+@dataclass(frozen=True)
+class RiggingPaths:
+    run_root: Path
+    input_dir: Path
+    blender_dir: Path
+    output_dir: Path
+    validation_dir: Path
+    manifests_dir: Path
+    logs_dir: Path
+    manifest_path: Path
+    summary_path: Path
+    report_path: Path
+    source_copy_path: Path
+    blender_config_path: Path
+    blender_report_json_path: Path
+    working_blend_path: Path
+    rigged_glb_path: Path
+    rigged_fbx_path: Path
+    command_logs_path: Path
+    blender_stdout_log_path: Path
+    blender_stderr_log_path: Path
+
+
 class BlenderRunner(Runner):
     def __init__(
         self,
@@ -109,7 +134,7 @@ class BlenderRunner(Runner):
     def describe(self) -> RunnerDescription:
         return RunnerDescription(
             runner_id=RUNNER_ID,
-            display_label="Blender + Instant Meshes",
+            display_label="Blender + Instant Meshes + Rigify",
             supported_operation_kinds=["operate"],
             supported_target_kinds=["use_case"],
             supports_cancel=False,
@@ -132,7 +157,20 @@ class BlenderRunner(Runner):
                     "supported_modes": sorted(SUPPORTED_MODES),
                     "required_inputs": ["source_model_path"],
                 },
-            )
+            ),
+            RunnerTarget(
+                target_id=TARGET_ID_CREATE_RIG_HUMANOID,
+                display_label="Create rig humanoid",
+                target_kind="use_case",
+                operation_kind="operate",
+                metadata={
+                    "default_mode": "auto",
+                    "supported_modes": sorted(SUPPORTED_MODES),
+                    "required_inputs": ["prepared_model_path"],
+                    "validation_pose_set": "basic_humanoid_v1",
+                    "pose_checks": list(POSE_SUITE_BASIC_HUMANOID),
+                },
+            ),
         ]
 
     def start_run(self, request: StartRunRequest) -> StartRunResponse:
@@ -162,7 +200,10 @@ class BlenderRunner(Runner):
                 ),
             )
 
-        if request.target_id != TARGET_ID_CLEANUP_PRE_RIG:
+        if request.target_id not in {
+            TARGET_ID_CLEANUP_PRE_RIG,
+            TARGET_ID_CREATE_RIG_HUMANOID,
+        }:
             return StartRunResponse(
                 runner_id=RUNNER_ID,
                 operation_kind=request.operation_kind,
@@ -192,7 +233,17 @@ class BlenderRunner(Runner):
                 ),
             )
 
-        run_id = request.run_id or self.build_run_id()
+        if request.target_id == TARGET_ID_CLEANUP_PRE_RIG:
+            return self.start_cleanup_pre_rig_run(request, mode=mode)
+        return self.start_create_rig_humanoid_run(request, mode=mode)
+
+    def start_cleanup_pre_rig_run(
+        self,
+        request: StartRunRequest,
+        *,
+        mode: str,
+    ) -> StartRunResponse:
+        run_id = request.run_id or self.build_run_id(TARGET_ID_CLEANUP_PRE_RIG)
         source_path = self.resolve_source_path(request.inputs.get("source_model_path"))
         project_id = sanitize_path_token(request.inputs.get("project_id"), "default")
         entity_hint = request.inputs.get("entity_id")
@@ -394,6 +445,219 @@ class BlenderRunner(Runner):
         )
         return self.payload_to_start_response(payload)
 
+    def start_create_rig_humanoid_run(
+        self,
+        request: StartRunRequest,
+        *,
+        mode: str,
+    ) -> StartRunResponse:
+        run_id = request.run_id or self.build_run_id(TARGET_ID_CREATE_RIG_HUMANOID)
+        source_path = self.resolve_source_path(request.inputs.get("prepared_model_path"))
+        project_id = sanitize_path_token(request.inputs.get("project_id"), "default")
+        entity_hint = request.inputs.get("entity_id")
+        if entity_hint is None and source_path is not None:
+            entity_hint = source_path.stem
+        entity_id = sanitize_path_token(entity_hint, "humanoid")
+        paths = self.build_rigging_paths(
+            project_id=project_id,
+            entity_id=entity_id,
+            run_id=run_id,
+        )
+
+        if paths.manifest_path.exists() or paths.summary_path.exists():
+            return StartRunResponse(
+                runner_id=RUNNER_ID,
+                operation_kind=request.operation_kind,
+                target_id=request.target_id,
+                run_id=run_id,
+                accepted=False,
+                status="fail_runtime",
+                message=(
+                    f"Ya existe evidencia previa para run_id={run_id!r}. "
+                    "Usa otro run_id o consulta ese resultado."
+                ),
+                manifest_path=str(paths.manifest_path),
+                summary_path=str(paths.summary_path),
+                evidence_path=str(paths.report_path),
+            )
+
+        self.prepare_rigging_run_directories(paths)
+
+        base_payload = {
+            "runner_id": RUNNER_ID,
+            "operation_kind": request.operation_kind,
+            "target_id": request.target_id,
+            "run_id": run_id,
+            "project_id": project_id,
+            "entity_id": entity_id,
+            "mode": mode,
+            "status": "running",
+            "message": "Preparando create_rig_humanoid con Blender + Rigify.",
+            "requested_by": request.requested_by,
+            "channel": request.channel,
+            "requested_at": utc_now(),
+            "started_at": utc_now(),
+            "completed_at": None,
+            "manifest_path": str(paths.manifest_path),
+            "summary_path": str(paths.summary_path),
+            "evidence_path": str(paths.report_path),
+            "run_root": str(paths.run_root),
+            "artifact_refs": [],
+            "warnings": [],
+            "command_logs": [],
+            "source_model_path": str(source_path) if source_path else None,
+            "source_copy_path": None,
+            "working_blend_path": str(paths.working_blend_path),
+            "rigged_glb_path": str(paths.rigged_glb_path),
+            "rigged_fbx_path": str(paths.rigged_fbx_path),
+            "blender_report_path": str(paths.blender_report_json_path),
+            "rigging_report_path": str(paths.report_path),
+            "metadata": {
+                "supported_source_extensions": sorted(SUPPORTED_SOURCE_EXTENSIONS),
+                "pose_suite": "basic_humanoid_v1",
+                "pose_checks": list(POSE_SUITE_BASIC_HUMANOID),
+            },
+        }
+        write_json(paths.manifest_path, base_payload)
+
+        if source_path is None:
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="blocked_missing_asset",
+                message=(
+                    "Falta inputs.prepared_model_path para ejecutar create_rig_humanoid."
+                ),
+            )
+            return self.payload_to_start_response(payload)
+
+        if not source_path.exists():
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="blocked_missing_asset",
+                message=f"No existe el modelo preparado de entrada: {source_path}",
+            )
+            return self.payload_to_start_response(payload)
+
+        if source_path.suffix.lower() not in SUPPORTED_SOURCE_EXTENSIONS:
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="fail_compile",
+                message=(
+                    "Extension no soportada para create_rig_humanoid: "
+                    f"{source_path.suffix.lower()!r}."
+                ),
+            )
+            return self.payload_to_start_response(payload)
+
+        copied_source_path = self.copy_source_model(source_path, paths.source_copy_path)
+        base_payload["source_copy_path"] = str(copied_source_path)
+
+        blender_config = self.build_create_rig_config(
+            request=request,
+            paths=paths,
+            prepared_model_path=copied_source_path,
+            mode=mode,
+            run_id=run_id,
+        )
+        write_json(paths.blender_config_path, blender_config)
+
+        blender_result = self.run_backend_command(
+            stage="blender",
+            command=[
+                "bash",
+                str(self.blender_wrapper_path),
+                "create-rig-humanoid",
+                str(paths.blender_config_path),
+            ],
+            stdout_path=paths.blender_stdout_log_path,
+            stderr_path=paths.blender_stderr_log_path,
+        )
+        base_payload["command_logs"].append(blender_result)
+        write_json(paths.command_logs_path, {"commands": base_payload["command_logs"]})
+
+        if blender_result["exit_code"] != 0:
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="fail_runtime",
+                message=(
+                    "Blender no pudo completar create_rig_humanoid. "
+                    f"Revisa {paths.blender_stderr_log_path}."
+                ),
+            )
+            return self.payload_to_start_response(payload)
+
+        if not paths.blender_report_json_path.exists():
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="fail_runtime",
+                message=(
+                    "Blender termino sin publicar el reporte de rigging esperado "
+                    f"en {paths.blender_report_json_path}."
+                ),
+            )
+            return self.payload_to_start_response(payload)
+
+        blender_report = read_json(paths.blender_report_json_path)
+        warnings = list(blender_report.get("warnings", []))
+        base_payload["warnings"] = warnings
+        base_payload["metadata"]["blender_report"] = blender_report
+
+        expected_glb = bool(blender_config.get("export_glb", True))
+        expected_fbx = bool(blender_config.get("export_fbx", True))
+        missing_outputs: list[str] = []
+        if expected_glb and not paths.rigged_glb_path.exists():
+            missing_outputs.append(str(paths.rigged_glb_path))
+        if expected_fbx and not paths.rigged_fbx_path.exists():
+            missing_outputs.append(str(paths.rigged_fbx_path))
+        if missing_outputs:
+            payload = self.finalize_payload(
+                paths=paths,
+                payload=base_payload,
+                status="fail_runtime",
+                message=(
+                    "Blender reporto resultado de rigging, pero faltan outputs "
+                    f"esperados: {', '.join(missing_outputs)}."
+                ),
+            )
+            return self.payload_to_start_response(payload)
+
+        report_status = str(blender_report.get("status", "pass"))
+        if report_status not in {"pass", "soft_pass_with_fallback", "fail_quality"}:
+            if report_status == "fail_runtime":
+                report_status = "fail_runtime"
+            else:
+                report_status = "fail_runtime"
+                warnings.append(
+                    "Blender devolvio un status no canonico; se normaliza a fail_runtime."
+                )
+                base_payload["warnings"] = warnings
+
+        report_message = str(
+            blender_report.get("message")
+            or "Rigging report completed without explicit message."
+        )
+        if report_status == "soft_pass_with_fallback":
+            fallback_warning = (
+                "Rigify genero un rig utilizable con alertas de deformacion; "
+                "revisa la pose-suite antes de seguir."
+            )
+            if fallback_warning not in warnings:
+                warnings.append(fallback_warning)
+                base_payload["warnings"] = warnings
+
+        payload = self.finalize_payload(
+            paths=paths,
+            payload=base_payload,
+            status=report_status,
+            message=report_message,
+        )
+        return self.payload_to_start_response(payload)
+
     def get_run_status(self, run_id: str) -> RunStatus:
         payload = self.load_run_payload(run_id)
         return self.payload_to_status(payload)
@@ -413,8 +677,9 @@ class BlenderRunner(Runner):
         payload = self.load_run_payload(run_id)
         return self.payload_to_result(payload)
 
-    def build_run_id(self) -> str:
-        return datetime.now(timezone.utc).strftime("cleanup-%Y%m%d-%H%M%S")
+    def build_run_id(self, target_id: str) -> str:
+        prefix = "cleanup" if target_id == TARGET_ID_CLEANUP_PRE_RIG else "rigging"
+        return datetime.now(timezone.utc).strftime(f"{prefix}-%Y%m%d-%H%M%S")
 
     def resolve_source_path(self, value: Any) -> Path | None:
         if value is None:
@@ -458,12 +723,60 @@ class BlenderRunner(Runner):
             instant_stderr_log_path=logs_dir / "instant-meshes.stderr.log",
         )
 
+    def build_rigging_paths(
+        self,
+        *,
+        project_id: str,
+        entity_id: str,
+        run_id: str,
+    ) -> RiggingPaths:
+        run_root = self.studio_dir / "Assets3D" / project_id / entity_id / "rigging" / run_id
+        input_dir = run_root / "input"
+        blender_dir = run_root / "blender"
+        output_dir = run_root / "output"
+        validation_dir = run_root / "validation"
+        manifests_dir = run_root / "manifests"
+        logs_dir = run_root / "logs"
+        source_copy_name = f"{entity_id}__prepared__v001"
+        return RiggingPaths(
+            run_root=run_root,
+            input_dir=input_dir,
+            blender_dir=blender_dir,
+            output_dir=output_dir,
+            validation_dir=validation_dir,
+            manifests_dir=manifests_dir,
+            logs_dir=logs_dir,
+            manifest_path=manifests_dir / "run.json",
+            summary_path=manifests_dir / "summary.json",
+            report_path=run_root / "rigging-report.md",
+            source_copy_path=input_dir / source_copy_name,
+            blender_config_path=blender_dir / "rigging-config.json",
+            blender_report_json_path=manifests_dir / "blender-rigging.json",
+            working_blend_path=blender_dir / f"{entity_id}__rigging__v001.blend",
+            rigged_glb_path=output_dir / f"{entity_id}__rigged__v001.glb",
+            rigged_fbx_path=output_dir / f"{entity_id}__rigged__v001.fbx",
+            command_logs_path=logs_dir / "commands.json",
+            blender_stdout_log_path=logs_dir / "blender.stdout.log",
+            blender_stderr_log_path=logs_dir / "blender.stderr.log",
+        )
+
     def prepare_run_directories(self, paths: CleanupPaths) -> None:
         for directory in (
             paths.input_dir,
             paths.blender_dir,
             paths.instant_meshes_dir,
             paths.output_dir,
+            paths.manifests_dir,
+            paths.logs_dir,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def prepare_rigging_run_directories(self, paths: RiggingPaths) -> None:
+        for directory in (
+            paths.input_dir,
+            paths.blender_dir,
+            paths.output_dir,
+            paths.validation_dir,
             paths.manifests_dir,
             paths.logs_dir,
         ):
@@ -519,6 +832,36 @@ class BlenderRunner(Runner):
             "small_component_max_vertices": int(
                 request.options.get("small_component_max_vertices", 500)
             ),
+        }
+
+    def build_create_rig_config(
+        self,
+        *,
+        request: StartRunRequest,
+        paths: RiggingPaths,
+        prepared_model_path: Path,
+        mode: str,
+        run_id: str,
+    ) -> dict[str, Any]:
+        export_glb = bool(request.options.get("export_glb", True))
+        export_fbx = bool(request.options.get("export_fbx", True))
+        if not export_glb and not export_fbx:
+            # Keep at least one export for evidence so the helper remains deterministic.
+            export_glb = True
+
+        return {
+            "run_id": run_id,
+            "mode": mode,
+            "prepared_model_path": str(prepared_model_path),
+            "working_blend_path": str(paths.working_blend_path),
+            "rigged_glb_path": str(paths.rigged_glb_path),
+            "rigged_fbx_path": str(paths.rigged_fbx_path),
+            "validation_dir": str(paths.validation_dir),
+            "report_json_path": str(paths.blender_report_json_path),
+            "pose_suite": "basic_humanoid_v1",
+            "pose_checks": list(POSE_SUITE_BASIC_HUMANOID),
+            "export_glb": export_glb,
+            "export_fbx": export_fbx,
         }
 
     def build_instant_meshes_command(
@@ -610,7 +953,7 @@ class BlenderRunner(Runner):
     def finalize_payload(
         self,
         *,
-        paths: CleanupPaths,
+        paths: CleanupPaths | RiggingPaths,
         payload: dict[str, Any],
         status: str,
         message: str,
@@ -638,9 +981,9 @@ class BlenderRunner(Runner):
         )
         return final_payload
 
-    def collect_artifacts(self, paths: CleanupPaths) -> list[str]:
+    def collect_artifacts(self, paths: CleanupPaths | RiggingPaths) -> list[str]:
         artifacts: list[str] = []
-        for candidate in (
+        candidates: list[Path] = [
             paths.manifest_path,
             paths.summary_path,
             paths.source_copy_path.with_suffix(".glb"),
@@ -649,18 +992,35 @@ class BlenderRunner(Runner):
             paths.source_copy_path.with_suffix(".obj"),
             paths.source_copy_path.with_suffix(".ply"),
             paths.source_copy_path.with_suffix(".stl"),
-            paths.cleaned_glb_path,
-            paths.cleaned_obj_path,
-            paths.remeshed_obj_path,
             paths.working_blend_path,
             paths.blender_report_json_path,
             paths.blender_stdout_log_path,
             paths.blender_stderr_log_path,
-            paths.instant_stdout_log_path,
-            paths.instant_stderr_log_path,
             paths.report_path,
             paths.command_logs_path,
-        ):
+        ]
+
+        if isinstance(paths, CleanupPaths):
+            candidates.extend(
+                [
+                    paths.cleaned_glb_path,
+                    paths.cleaned_obj_path,
+                    paths.remeshed_obj_path,
+                    paths.instant_stdout_log_path,
+                    paths.instant_stderr_log_path,
+                ]
+            )
+        else:
+            candidates.extend([paths.rigged_glb_path, paths.rigged_fbx_path])
+            candidates.extend(
+                sorted(
+                    path
+                    for path in paths.validation_dir.glob("*")
+                    if path.is_file()
+                )
+            )
+
+        for candidate in candidates:
             if candidate.exists():
                 artifacts.append(str(candidate))
         return artifacts
@@ -669,9 +1029,10 @@ class BlenderRunner(Runner):
         warnings = list(payload.get("warnings", []))
         command_logs = list(payload.get("command_logs", []))
         artifact_refs = list(payload.get("artifact_refs", []))
+        is_cleanup = payload.get("target_id") == TARGET_ID_CLEANUP_PRE_RIG
 
         lines = [
-            "# Cleanup Pre-Rig Report",
+            "# Cleanup Pre-Rig Report" if is_cleanup else "# Rigging Report",
             "",
             f"- status: `{payload['status']}`",
             f"- message: {payload['message']}",
@@ -687,13 +1048,30 @@ class BlenderRunner(Runner):
             "",
             f"- source_model_path: `{payload.get('source_model_path')}`",
             f"- source_copy_path: `{payload.get('source_copy_path')}`",
-            f"- cleaned_obj_path: `{payload.get('cleaned_obj_path')}`",
-            f"- cleaned_glb_path: `{payload.get('cleaned_glb_path')}`",
-            f"- remeshed_obj_path: `{payload.get('remeshed_obj_path')}`",
-            "",
-            "## Command Logs",
-            "",
         ]
+        if is_cleanup:
+            lines.extend(
+                [
+                    f"- cleaned_obj_path: `{payload.get('cleaned_obj_path')}`",
+                    f"- cleaned_glb_path: `{payload.get('cleaned_glb_path')}`",
+                    f"- remeshed_obj_path: `{payload.get('remeshed_obj_path')}`",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"- rigged_glb_path: `{payload.get('rigged_glb_path')}`",
+                    f"- rigged_fbx_path: `{payload.get('rigged_fbx_path')}`",
+                    f"- rigging_report_path: `{payload.get('rigging_report_path')}`",
+                ]
+            )
+        lines.extend(
+            [
+                "",
+                "## Command Logs",
+                "",
+            ]
+        )
 
         if command_logs:
             for item in command_logs:
@@ -724,32 +1102,56 @@ class BlenderRunner(Runner):
 
         blender_report = payload.get("metadata", {}).get("blender_report")
         if isinstance(blender_report, dict):
-            before_stats = blender_report.get("before", {})
-            after_stats = blender_report.get("after", {})
-            lines.extend(
-                [
-                    "",
-                    "## Cleanup Metrics",
-                    "",
-                    f"- before_mesh_count: `{before_stats.get('mesh_count')}`",
-                    f"- before_face_count: `{before_stats.get('face_count')}`",
-                    f"- after_mesh_count: `{after_stats.get('mesh_count')}`",
-                    f"- after_face_count: `{after_stats.get('face_count')}`",
-                    f"- joined_meshes: `{blender_report.get('joined_meshes')}`",
-                    f"- removed_small_components: `{blender_report.get('removed_small_components')}`",
-                    f"- decimation_applied: `{blender_report.get('decimation_applied')}`",
-                ]
-            )
+            if is_cleanup:
+                before_stats = blender_report.get("before", {})
+                after_stats = blender_report.get("after", {})
+                lines.extend(
+                    [
+                        "",
+                        "## Cleanup Metrics",
+                        "",
+                        f"- before_mesh_count: `{before_stats.get('mesh_count')}`",
+                        f"- before_face_count: `{before_stats.get('face_count')}`",
+                        f"- after_mesh_count: `{after_stats.get('mesh_count')}`",
+                        f"- after_face_count: `{after_stats.get('face_count')}`",
+                        f"- joined_meshes: `{blender_report.get('joined_meshes')}`",
+                        f"- removed_small_components: `{blender_report.get('removed_small_components')}`",
+                        f"- decimation_applied: `{blender_report.get('decimation_applied')}`",
+                    ]
+                )
+            pose_validation = blender_report.get("pose_validation")
+            if isinstance(pose_validation, dict):
+                lines.extend(
+                    [
+                        "",
+                        "## Pose Validation",
+                        "",
+                        f"- suite: `{pose_validation.get('suite', 'basic_humanoid_v1')}`",
+                    ]
+                )
+                pose_statuses = pose_validation.get("poses", {})
+                if isinstance(pose_statuses, dict):
+                    for pose_name in POSE_SUITE_BASIC_HUMANOID:
+                        pose_payload = pose_statuses.get(pose_name, {})
+                        lines.append(
+                            f"- {pose_name}: `{pose_payload.get('status', 'unknown')}` "
+                            f"(deformation_score=`{pose_payload.get('deformation_score', 'n/a')}`)"
+                        )
 
         return "\n".join(lines) + "\n"
 
     def find_run_manifest(self, run_id: str) -> Path:
         assets_root = self.studio_dir / "Assets3D"
-        pattern = f"*/*/cleanup/{run_id}/manifests/run.json"
-        matches = sorted(assets_root.glob(pattern))
+        patterns = (
+            f"*/*/cleanup/{run_id}/manifests/run.json",
+            f"*/*/rigging/{run_id}/manifests/run.json",
+        )
+        matches: list[Path] = []
+        for pattern in patterns:
+            matches.extend(sorted(assets_root.glob(pattern)))
         if not matches:
             raise FileNotFoundError(f"No existe corrida conocida con run_id={run_id!r}.")
-        return matches[-1]
+        return sorted(matches)[-1]
 
     def load_run_payload(self, run_id: str) -> dict[str, Any]:
         manifest_path = self.find_run_manifest(run_id)

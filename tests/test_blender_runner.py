@@ -12,23 +12,22 @@ from openclaw_studio.runners.blender import (
     BlenderRunner,
     RUNNER_ID,
     TARGET_ID_CLEANUP_PRE_RIG,
+    TARGET_ID_CREATE_RIG_HUMANOID,
 )
 
 
 FAKE_BLENDER_SCRIPT = """#!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "${1:-}" != "pre-rig-cleanup" ]]; then
-  exit 0
-fi
-
-config_json="${2:-}"
+stage="${1:-}"
 if [[ "${FAKE_BLENDER_FAIL:-0}" == "1" ]]; then
   echo "forced blender failure" >&2
   exit 1
 fi
 
-python3 - "$config_json" <<'PY'
+if [[ "$stage" == "pre-rig-cleanup" ]]; then
+  config_json="${2:-}"
+  python3 - "$config_json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -61,6 +60,60 @@ report = {
 }
 report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 PY
+  exit 0
+fi
+
+if [[ "$stage" == "create-rig-humanoid" ]]; then
+  config_json="${2:-}"
+  python3 - "$config_json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+config = json.loads(config_path.read_text(encoding="utf-8"))
+
+rigged_glb = Path(config["rigged_glb_path"])
+rigged_fbx = Path(config["rigged_fbx_path"])
+working_blend = Path(config["working_blend_path"])
+validation_dir = Path(config["validation_dir"])
+report_path = Path(config["report_json_path"])
+
+rigged_glb.parent.mkdir(parents=True, exist_ok=True)
+working_blend.parent.mkdir(parents=True, exist_ok=True)
+validation_dir.mkdir(parents=True, exist_ok=True)
+report_path.parent.mkdir(parents=True, exist_ok=True)
+
+rigged_glb.write_bytes(b"rigged-glb")
+rigged_fbx.write_bytes(b"rigged-fbx")
+working_blend.write_bytes(b"rigged-blend")
+
+pose_artifacts = {}
+for pose_name in ("arms", "elbows", "knees", "head", "torso"):
+    pose_path = validation_dir / f"{pose_name}.png"
+    pose_path.write_bytes(b"pose")
+    pose_artifacts[pose_name] = str(pose_path)
+
+report = {
+    "status": "pass",
+    "message": "Rig generated in fake Blender.",
+    "warnings": ["fake rigging warning"],
+    "pose_validation": {
+        "suite": "basic_humanoid_v1",
+        "poses": {
+            "arms": {"status": "pass", "deformation_score": 0.07},
+            "elbows": {"status": "pass", "deformation_score": 0.08},
+            "knees": {"status": "pass", "deformation_score": 0.09},
+            "head": {"status": "pass", "deformation_score": 0.05},
+            "torso": {"status": "pass", "deformation_score": 0.06},
+        },
+        "artifacts": pose_artifacts,
+    },
+}
+report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+PY
+  exit 0
+fi
 """
 
 
@@ -110,22 +163,30 @@ class BlenderRunnerTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tempdir.cleanup()
 
-    def make_request(self, *, inputs: dict[str, object] | None = None) -> StartRunRequest:
+    def make_request(
+        self,
+        *,
+        target_id: str = TARGET_ID_CLEANUP_PRE_RIG,
+        inputs: dict[str, object] | None = None,
+    ) -> StartRunRequest:
         return StartRunRequest(
             runner_id=RUNNER_ID,
             operation_kind="operate",
-            target_id=TARGET_ID_CLEANUP_PRE_RIG,
+            target_id=target_id,
             requested_by="tests",
             channel="tests",
             inputs=inputs or {},
         )
 
-    def test_list_targets_exposes_cleanup_use_case(self) -> None:
+    def test_list_targets_exposes_cleanup_and_rigging_use_cases(self) -> None:
         targets = self.runner.list_targets("operate")
+        target_ids = [target.target_id for target in targets]
 
-        self.assertEqual(len(targets), 1)
-        self.assertEqual(targets[0].target_id, TARGET_ID_CLEANUP_PRE_RIG)
+        self.assertEqual(len(targets), 2)
+        self.assertEqual(target_ids, [TARGET_ID_CLEANUP_PRE_RIG, TARGET_ID_CREATE_RIG_HUMANOID])
         self.assertEqual(targets[0].metadata["default_mode"], "auto")
+        self.assertEqual(targets[1].metadata["default_mode"], "auto")
+        self.assertEqual(targets[1].metadata["required_inputs"], ["prepared_model_path"])
 
     def test_missing_source_model_returns_blocked_status_and_report(self) -> None:
         response = self.runner.start_run(self.make_request())
@@ -224,6 +285,46 @@ class BlenderRunnerTests(unittest.TestCase):
         self.assertTrue(Path(payload["cleaned_obj_path"]).is_file())
         self.assertFalse(Path(payload["remeshed_obj_path"]).exists())
         self.assertGreaterEqual(len(payload["warnings"]), 1)
+
+    def test_create_rig_missing_prepared_model_returns_blocked_status_and_report(self) -> None:
+        response = self.runner.start_run(self.make_request(target_id=TARGET_ID_CREATE_RIG_HUMANOID))
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "blocked_missing_asset")
+        self.assertIsNotNone(response.run_id)
+        self.assertTrue(Path(response.manifest_path).is_file())  # type: ignore[arg-type]
+        self.assertTrue(Path(response.summary_path).is_file())  # type: ignore[arg-type]
+        self.assertTrue(Path(response.evidence_path).is_file())  # type: ignore[arg-type]
+
+    def test_create_rig_pass_flow_publishes_rigged_exports_and_pose_evidence(self) -> None:
+        prepared_model = self.root / "hero-prepared.obj"
+        prepared_model.write_text("o hero_prepared\n", encoding="utf-8")
+
+        response = self.runner.start_run(
+            self.make_request(
+                target_id=TARGET_ID_CREATE_RIG_HUMANOID,
+                inputs={
+                    "prepared_model_path": str(prepared_model),
+                    "project_id": "demo",
+                    "entity_id": "hero",
+                },
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "pass")
+        self.assertIsNotNone(response.run_id)
+
+        payload = json.loads(Path(response.summary_path).read_text(encoding="utf-8"))  # type: ignore[arg-type]
+        self.assertEqual(payload["status"], "pass")
+        self.assertEqual(len(payload["command_logs"]), 1)
+        self.assertTrue(Path(payload["rigged_glb_path"]).is_file())
+        self.assertTrue(Path(payload["rigged_fbx_path"]).is_file())
+        self.assertTrue(Path(payload["rigging_report_path"]).is_file())
+
+        validation = payload["metadata"]["blender_report"]["pose_validation"]
+        self.assertEqual(validation["suite"], "basic_humanoid_v1")
+        self.assertEqual(set(validation["poses"].keys()), {"arms", "elbows", "knees", "head", "torso"})
 
     def test_run_backend_command_captures_with_pipes_before_persisting_logs(self) -> None:
         backend_script = self.root / "backend-sensitive-to-redirection.sh"

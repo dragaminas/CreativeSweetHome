@@ -60,6 +60,39 @@ scripts/actions/runner-action.sh start blender operate cleanup_pre_rig_humanoid
 La documentacion operativa completa del flujo esta en
 [3d-pre-rig-cleanup.md](3d-pre-rig-cleanup.md).
 
+## Create rig humanoide
+
+El runner canonico `blender` ya expone `create_rig_humanoid` bajo
+`operation_kind=operate`, reutilizando la misma capa `runner-action.sh`:
+
+```bash
+scripts/actions/runner-action.sh list-targets blender operate
+scripts/actions/runner-action.sh start blender operate create_rig_humanoid
+```
+
+Si ejecutas `start` sin `inputs`, el target responde
+`blocked_missing_asset` y deja evidencia canonica bajo
+`$STUDIO_DIR/Assets3D/.../rigging/<run_id>/`.
+
+Para ejecutar el flujo real:
+
+```bash
+OPENCLAW_RUNNER_INPUTS_JSON='{"prepared_model_path":"/home/eric/Studio/Assets3D/demo/hero/cleanup/<run_id>/output/hero__remeshed__v001.obj","project_id":"demo","entity_id":"hero"}' \
+scripts/actions/runner-action.sh start blender operate create_rig_humanoid
+```
+
+Happy path esperado:
+
+- `Rigify` + `automatic weights` en background
+- pose-suite `basic_humanoid_v1` (`arms`, `elbows`, `knees`, `head`, `torso`)
+- evidencia en `Assets3D/<project>/<entity_id>/rigging/<run_id>/` con:
+  - `manifests/run.json` y `manifests/summary.json`
+  - `logs/blender.stdout.log` y `logs/blender.stderr.log`
+  - `output/<entity_id>__rigged__v001.glb`
+  - `output/<entity_id>__rigged__v001.fbx`
+  - `validation/*.png`
+  - `rigging-report.md`
+
 Si la maquina todavia no tiene las dependencias del flujo, usa:
 
 ```bash
