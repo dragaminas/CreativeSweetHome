@@ -1,7 +1,9 @@
 import type { PageServerLoad } from './$types';
 
 import { listAssets, getAssetReadiness } from '$lib/server/asset-catalog';
+import { listRunnerTargets } from '$lib/server/runner-bridge';
 import type { ListAssetsResult } from '$lib/server/asset-catalog';
+import type { RunnerTargetRecord } from '$lib/types/product';
 
 function searchParam(url: string, key: string): string {
   return new URL(url, 'http://localhost').searchParams.get(key) ?? '';
@@ -22,6 +24,13 @@ function resolveDefaultScene(
 
 export const load: PageServerLoad = async ({ parent, url }) => {
   const parentData = await parent();
+  let referenceTargets: RunnerTargetRecord[] = [];
+
+  try {
+    referenceTargets = await listRunnerTargets('comfyui', 'operate');
+  } catch {
+    referenceTargets = [];
+  }
 
   // Prefer explicit query params over resolved defaults
   const explicitProjectId = url.searchParams.get('projectId');
@@ -57,7 +66,8 @@ export const load: PageServerLoad = async ({ parent, url }) => {
       projectId,
       sceneId,
       assetCatalog,
-      assetReadiness
+      assetReadiness,
+      referenceTargets
     };
   }
 
@@ -90,6 +100,7 @@ export const load: PageServerLoad = async ({ parent, url }) => {
     projectId,
     sceneId,
     assetCatalog,
-    assetReadiness
+    assetReadiness,
+    referenceTargets
   };
 };

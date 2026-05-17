@@ -76,6 +76,12 @@ export async function loadStudioState(): Promise<StudioState> {
         'ComfyUI',
         context.comfyWorkspaceDir,
         'Area local reservada para el engine y assets intermedios.'
+      ),
+      directoryStatus(
+        'validation-comfyui',
+        'Validation/ComfyUI',
+        path.join(context.studioDir, 'Validation', 'comfyui'),
+        'Evidencia canonica para operate y validaciones de ComfyUI.'
       )
     ])
   };

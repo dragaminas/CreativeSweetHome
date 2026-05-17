@@ -34,6 +34,18 @@ export const SHELL_PREVIEW_INPUT: SharedBriefInput = {
   references: ['turnaround del personaje', 'moodboard de lluvia nocturna']
 };
 
+export interface AssetReferenceBriefInput {
+  projectId: string;
+  sceneId: string;
+  assetKind: 'character' | 'object';
+  assetId: string;
+  assetLabel?: string;
+  assetDescription?: string;
+  brief: string;
+  references?: string[];
+  notes?: string;
+}
+
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
@@ -132,6 +144,32 @@ function buildConsumerBriefs(fields: StructuredBriefFields, keywords: string[]):
       ]
     }
   ];
+}
+
+export function buildAssetReferenceBriefText(input: AssetReferenceBriefInput): string {
+  const projectId = normalizeWhitespace(input.projectId || 'default');
+  const sceneId = normalizeWhitespace(input.sceneId || 'scene-draft');
+  const assetKind = input.assetKind === 'object' ? 'object' : 'character';
+  const assetId = normalizeWhitespace(input.assetId || 'asset-unknown');
+  const assetLabel = normalizeWhitespace(input.assetLabel || '');
+  const assetDescription = normalizeWhitespace(input.assetDescription || '');
+  const brief = normalizeWhitespace(input.brief || '');
+  const references = (input.references || []).map(normalizeWhitespace).filter(Boolean);
+  const notes = normalizeWhitespace(input.notes || '');
+
+  const lines = [
+    `project_id: ${projectId}`,
+    `scene_id: ${sceneId}`,
+    `asset_kind: ${assetKind}`,
+    `asset_id: ${assetId}`,
+    `asset_label: ${assetLabel || 'n/a'}`,
+    `asset_description: ${assetDescription || 'n/a'}`,
+    `creative_brief: ${brief}`,
+    `existing_references: ${references.length > 0 ? references.join(' | ') : 'none'}`,
+    `notes: ${notes || 'n/a'}`
+  ];
+
+  return `${lines.join('\n')}\n`;
 }
 
 export function buildSharedBrief(input: SharedBriefInput): SharedBrief {

@@ -3,6 +3,8 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 
 import { asRecord, asString, asNullableString, asStringArray } from '$lib/server/http';
+import { buildAssetReferenceBriefText } from '$lib/server/brief-translator';
+import { startAssetReferenceRun } from '$lib/server/runner-bridge';
 import {
   listAssets,
   createAsset,
@@ -27,6 +29,37 @@ function parseOptionalStringArray(value: unknown): string[] | undefined {
   }
 
   return asStringArray(value);
+}
+
+function parseReferenceSourcePaths(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry): entry is string => typeof entry === 'string')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(/\r?\n|,/g)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function mapRunStatusToAssetStageState(status: string): AssetStageState {
+  if (status === 'pass') {
+    return 'ready';
+  }
+  if (status === 'running' || status === 'queued' || status === 'soft_pass_with_fallback') {
+    return 'in_progress';
+  }
+  if (status === 'cancelled') {
+    return 'pending';
+  }
+  return 'failed';
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -216,6 +249,111 @@ export const POST: RequestHandler = async ({ request }) => {
           asset: result.asset
         },
         { status: statusMap[result.status] || 500 }
+      );
+    }
+
+    if (action === 'reference_import' || action === 'reference_generate') {
+      const assetId = asString(body.assetId || '');
+      if (!assetId) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'assetId es obligatorio para gestionar referencias.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const referenceSourcePaths = parseReferenceSourcePaths(
+        body.referenceSourcePaths ?? body.reference_source_paths
+      );
+      if (action === 'reference_import' && referenceSourcePaths.length === 0) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'reference_source_paths debe incluir al menos una ruta para importar.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const catalog = await listAssets({
+        projectId,
+        sceneId,
+        kind
+      });
+      const asset = catalog.assets.find((entry) => entry.assetId === assetId);
+      if (!asset) {
+        return json(
+          {
+            accepted: false,
+            status: 'not_found',
+            message: `No se encontro el asset ${assetId} en el catalogo ${kind}.`
+          },
+          { status: 404 }
+        );
+      }
+
+      const draftBrief = asString(body.brief || body.briefText || body.prompt || asset.description || asset.label);
+      if (action === 'reference_generate' && !draftBrief.trim()) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'brief es obligatorio para generar referencias.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const run = await startAssetReferenceRun({
+        mode: action === 'reference_import' ? 'import' : 'generate',
+        projectId,
+        sceneId,
+        assetKind: kind,
+        assetId,
+        briefText: buildAssetReferenceBriefText({
+          projectId,
+          sceneId,
+          assetKind: kind,
+          assetId,
+          assetLabel: asset.label,
+          assetDescription: asset.description,
+          brief: draftBrief,
+          references: asset.references,
+          notes: asString(body.notes)
+        }),
+        presetId: asString(body.presetId, 'uc-img-02-frame-baseline-preview'),
+        notes: asString(body.notes),
+        referenceSourcePaths
+      });
+
+      const updated = await updateAsset({
+        projectId,
+        sceneId,
+        kind,
+        assetId,
+        stage: 'reference_image',
+        stageState: mapRunStatusToAssetStageState(run.status),
+        references:
+          action === 'reference_import' && run.artifact_refs.length > 0
+            ? run.artifact_refs
+            : undefined
+      });
+
+      return json(
+        {
+          accepted: run.accepted,
+          status: run.status,
+          message: run.message,
+          assetId,
+          asset: updated.asset,
+          manifestPath: updated.manifestPath,
+          run
+        },
+        { status: run.accepted ? 200 : 502 }
       );
     }
 

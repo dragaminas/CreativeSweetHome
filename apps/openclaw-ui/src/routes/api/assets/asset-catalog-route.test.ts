@@ -2,11 +2,21 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { startRunMock } = vi.hoisted(() => ({ startRunMock: vi.fn() }));
+
+vi.mock('$lib/server/runner-bridge', () => ({
+  startAssetReferenceRun: startRunMock
+}));
 
 import { DELETE, GET, POST } from './+server';
 
 describe('asset catalog route', () => {
+  beforeEach(() => {
+    startRunMock.mockReset();
+  });
+
   it('keeps tags and references when update omits those fields', async () => {
     const previousStudioDir = process.env.STUDIO_DIR;
     const tempStudioDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-assets-route-update-'));
@@ -308,5 +318,143 @@ describe('asset catalog route', () => {
         process.env.STUDIO_DIR = previousStudioDir;
       }
     }
+  });
+
+  it('starts canonical comfyui operate run for reference_generate and updates stage state', async () => {
+    const previousStudioDir = process.env.STUDIO_DIR;
+    const tempStudioDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-assets-route-ref-generate-'));
+    process.env.STUDIO_DIR = tempStudioDir;
+
+    const projectId = 'pilot-feature';
+    const sceneId = 'opening-alley';
+
+    startRunMock.mockResolvedValue({
+      runner_id: 'comfyui',
+      operation_kind: 'operate',
+      target_id: 'asset-reference-generate',
+      run_id: 'operate-20260517-123000',
+      accepted: true,
+      status: 'soft_pass_with_fallback',
+      message: 'Solicitud registrada para generar referencias.',
+      artifact_refs: [
+        `${tempStudioDir}/Scenes/${projectId}/${sceneId}/assets/characters/chr-001/references/requests/operate-20260517-123000__request.json`
+      ],
+      manifest_path: `${tempStudioDir}/Validation/comfyui/operate/operate-20260517-123000/manifests/run.json`,
+      summary_path: `${tempStudioDir}/Validation/comfyui/operate/operate-20260517-123000/manifests/summary.json`,
+      evidence_path: `${tempStudioDir}/Validation/comfyui/operate/operate-20260517-123000/evidence/summary.md`,
+      progress_events: [
+        {
+          step_id: 'request-accepted',
+          state: 'done',
+          message: 'Run accepted.'
+        }
+      ],
+      metadata: {
+        progress_events: [
+          {
+            step_id: 'request-accepted',
+            state: 'done',
+            message: 'Run accepted.'
+          }
+        ]
+      }
+    });
+
+    try {
+      const createResponse = await POST({
+        request: new Request('http://localhost/api/assets', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create',
+            projectId,
+            sceneId,
+            kind: 'character',
+            label: 'Nora',
+            description: 'Piloto principal de la escena.'
+          })
+        })
+      } as never);
+      expect(createResponse.status).toBe(201);
+      const createPayload = (await createResponse.json()) as { assetId: string };
+
+      const generateResponse = await POST({
+        request: new Request('http://localhost/api/assets', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            action: 'reference_generate',
+            projectId,
+            sceneId,
+            kind: 'character',
+            assetId: createPayload.assetId,
+            brief: 'Retrato nocturno con lluvia y neon.',
+            presetId: 'uc-img-02-frame-baseline-preview'
+          })
+        })
+      } as never);
+
+      expect(generateResponse.status).toBe(200);
+      const generatePayload = (await generateResponse.json()) as {
+        accepted: boolean;
+        status: string;
+        run: { run_id: string; target_id: string; progress_events: Array<{ step_id: string }> };
+      };
+      expect(generatePayload.accepted).toBe(true);
+      expect(generatePayload.status).toBe('soft_pass_with_fallback');
+      expect(generatePayload.run.run_id).toBe('operate-20260517-123000');
+      expect(generatePayload.run.target_id).toBe('asset-reference-generate');
+      expect(generatePayload.run.progress_events[0]?.step_id).toBe('request-accepted');
+      expect(startRunMock).toHaveBeenCalledTimes(1);
+      expect(startRunMock.mock.calls[0]?.[0]).toMatchObject({
+        mode: 'generate',
+        projectId,
+        sceneId,
+        assetKind: 'character',
+        assetId: createPayload.assetId,
+        presetId: 'uc-img-02-frame-baseline-preview'
+      });
+
+      const listResponse = await GET({
+        url: new URL(
+          `http://localhost/api/assets?projectId=${projectId}&sceneId=${sceneId}&kind=character`
+        )
+      } as never);
+      expect(listResponse.status).toBe(200);
+      const listPayload = (await listResponse.json()) as {
+        assets: Array<{ assetId: string; stage: string; stageState: string }>;
+      };
+      const asset = listPayload.assets.find((entry) => entry.assetId === createPayload.assetId);
+      expect(asset?.stage).toBe('reference_image');
+      expect(asset?.stageState).toBe('in_progress');
+    } finally {
+      if (previousStudioDir === undefined) {
+        delete process.env.STUDIO_DIR;
+      } else {
+        process.env.STUDIO_DIR = previousStudioDir;
+      }
+    }
+  });
+
+  it('rejects reference_import without source paths', async () => {
+    const response = await POST({
+      request: new Request('http://localhost/api/assets', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reference_import',
+          projectId: 'pilot-feature',
+          sceneId: 'opening-alley',
+          kind: 'character',
+          assetId: 'chr-001',
+          referenceSourcePaths: []
+        })
+      })
+    } as never);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { status: string; message: string };
+    expect(payload.status).toBe('fail_compile');
+    expect(payload.message).toContain('reference_source_paths');
   });
 });

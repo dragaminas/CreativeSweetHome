@@ -1,6 +1,11 @@
 <script lang="ts">
   import PathList from '$lib/components/PathList.svelte';
-  import type { DirectoryStatus } from '$lib/types/product';
+  import type {
+    AssetReferenceRunSummary,
+    DirectoryStatus,
+    RunnerProgressEvent,
+    RunnerTargetRecord
+  } from '$lib/types/product';
   import {
     type AssetEntry,
     type AssetKind,
@@ -18,9 +23,26 @@
     'asset_correction_through_benchmark_animation'
   ];
 
+  const REFERENCE_PRESET_OPTIONS = [
+    'uc-img-02-frame-baseline-preview',
+    'uc-img-03-style-exploration',
+    'uc-vid-03-image-to-video-reference'
+  ];
+
+  type ReferenceMode = 'import' | 'generate';
+
+  interface ReferenceWorkspaceResponse {
+    accepted: boolean;
+    status: string;
+    message: string;
+    run?: AssetReferenceRunSummary;
+  }
+
   $: assetDirectories = selectAssetDirectories(data.studio.directories);
   $: assetCatalog = data.assetCatalog || { total: 0, assets: [] };
   $: readiness = data.assetReadiness || null;
+  $: referenceTargets = (data.referenceTargets || []) as RunnerTargetRecord[];
+  $: availableAssets = (assetCatalog.assets || []) as AssetEntry[];
 
   let selectedKind: AssetKind = 'character';
   let activeProjectId = data.projectId || 'default';
@@ -34,9 +56,19 @@
   let stageDraftByAssetId: Record<string, AssetStage> = {};
   let stateDraftByAssetId: Record<string, AssetStageState> = {};
 
+  let referenceAssetId = '';
+  let referenceMode: ReferenceMode = 'import';
+  let referenceSourcePathsText = '';
+  let referenceBrief = '';
+  let referencePresetId = REFERENCE_PRESET_OPTIONS[0];
+  let referenceNotes = '';
+  let referenceSubmitting = false;
+  let referenceRun: AssetReferenceRunSummary | null = null;
+  let referenceError = '';
+
   function selectAssetDirectories(directories: DirectoryStatus[]): DirectoryStatus[] {
     return directories.filter((directory) =>
-      ['assets3d', 'exports', 'blender-projects'].includes(directory.id)
+      ['assets3d', 'exports', 'blender-projects', 'validation-comfyui'].includes(directory.id)
     );
   }
 
@@ -69,6 +101,15 @@
     return 'muted';
   }
 
+  function runStatusTone(status: string): string {
+    if (status === 'pass') return 'positive';
+    if (status === 'soft_pass_with_fallback' || status === 'running' || status === 'queued') {
+      return 'info';
+    }
+    if (status === 'cancelled') return 'muted';
+    return 'warning';
+  }
+
   function stageDraft(asset: AssetEntry): AssetStage {
     return stageDraftByAssetId[asset.assetId] || asset.stage;
   }
@@ -97,6 +138,68 @@
     stateDraftByAssetId = Object.fromEntries(
       assets.map((asset) => [asset.assetId, asset.stageState])
     );
+  }
+
+  function parseSourcePathsText(value: string): string[] {
+    return value
+      .split(/\r?\n|,/g)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  function selectedReferenceTarget(): RunnerTargetRecord | null {
+    const targetId = referenceMode === 'import' ? 'asset-reference-import' : 'asset-reference-generate';
+    return referenceTargets.find((target) => target.target_id === targetId) || null;
+  }
+
+  function selectedReferenceNotes(): string {
+    const notes = selectedReferenceTarget()?.metadata?.notes;
+    return typeof notes === 'string' ? notes : '';
+  }
+
+  function normalizeReferenceRun(payload: Record<string, unknown>): AssetReferenceRunSummary {
+    const metadata =
+      payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata)
+        ? (payload.metadata as Record<string, unknown>)
+        : {};
+
+    const progressEvents: RunnerProgressEvent[] = Array.isArray(metadata.progress_events)
+      ? metadata.progress_events
+          .filter((entry): entry is Record<string, unknown> =>
+            Boolean(entry && typeof entry === 'object' && !Array.isArray(entry))
+          )
+          .map((entry) => ({
+            at: typeof entry.at === 'string' ? entry.at : undefined,
+            step_id: typeof entry.step_id === 'string' ? entry.step_id : 'unknown',
+            state: typeof entry.state === 'string' ? entry.state : 'unknown',
+            message: typeof entry.message === 'string' ? entry.message : ''
+          }))
+      : [];
+
+    return {
+      runner_id: typeof payload.runner_id === 'string' ? payload.runner_id : 'comfyui',
+      operation_kind: typeof payload.operation_kind === 'string' ? payload.operation_kind : 'operate',
+      target_id: typeof payload.target_id === 'string' ? payload.target_id : '',
+      run_id: typeof payload.run_id === 'string' ? payload.run_id : '',
+      accepted: typeof payload.accepted === 'boolean' ? payload.accepted : true,
+      status: typeof payload.status === 'string' ? payload.status : 'fail_runtime',
+      message: typeof payload.message === 'string' ? payload.message : '',
+      artifact_refs: Array.isArray(payload.artifact_refs)
+        ? payload.artifact_refs.filter((entry): entry is string => typeof entry === 'string')
+        : [],
+      manifest_path: typeof payload.manifest_path === 'string' ? payload.manifest_path : undefined,
+      summary_path: typeof payload.summary_path === 'string' ? payload.summary_path : undefined,
+      evidence_path: typeof payload.evidence_path === 'string' ? payload.evidence_path : undefined,
+      progress_events: progressEvents
+    };
+  }
+
+  function canCancel(run: AssetReferenceRunSummary | null): boolean {
+    return Boolean(run && (run.status === 'running' || run.status === 'queued'));
+  }
+
+  function isImagePath(filePath: string): boolean {
+    return /\.(png|jpe?g|webp|gif|bmp)$/i.test(filePath);
   }
 
   async function handleCreateAsset() {
@@ -205,6 +308,105 @@
     }
   }
 
+  async function handleReferenceSubmit() {
+    referenceError = '';
+
+    if (!referenceAssetId) {
+      referenceError = 'Selecciona un asset para continuar.';
+      return;
+    }
+
+    const sourcePaths = parseSourcePathsText(referenceSourcePathsText);
+    if (referenceMode === 'import' && sourcePaths.length === 0) {
+      referenceError = 'Debes indicar al menos una ruta fuente para importar referencias.';
+      return;
+    }
+
+    if (referenceMode === 'generate' && !referenceBrief.trim()) {
+      referenceError = 'El brief es obligatorio para generar referencias.';
+      return;
+    }
+
+    referenceSubmitting = true;
+
+    try {
+      const response = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: referenceMode === 'import' ? 'reference_import' : 'reference_generate',
+          projectId: activeProjectId,
+          sceneId: activeSceneId,
+          kind: selectedKind,
+          assetId: referenceAssetId,
+          brief: referenceBrief,
+          presetId: referencePresetId,
+          notes: referenceNotes,
+          referenceSourcePaths: sourcePaths
+        })
+      });
+
+      const result = (await response.json()) as ReferenceWorkspaceResponse;
+      if (!result.accepted || !result.run) {
+        referenceError = result.message || 'No se pudo completar la corrida de referencias.';
+        return;
+      }
+
+      referenceRun = result.run;
+      message = result.message;
+      messageType =
+        result.status === 'pass' || result.status === 'soft_pass_with_fallback'
+          ? 'success'
+          : 'error';
+
+      await loadCatalog();
+      await loadReadiness();
+    } catch (error) {
+      referenceError =
+        error instanceof Error
+          ? `No se pudo enviar la corrida: ${error.message}`
+          : 'No se pudo enviar la corrida.';
+    } finally {
+      referenceSubmitting = false;
+    }
+  }
+
+  async function refreshReferenceStatus() {
+    if (!referenceRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/comfyui/${referenceRun.run_id}`);
+      const payload = (await response.json()) as Record<string, unknown>;
+      referenceRun = normalizeReferenceRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
+  async function cancelReferenceRun() {
+    if (!referenceRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/comfyui/${referenceRun.run_id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requested_by: 'openclaw-ui',
+          channel: 'web-ui'
+        })
+      });
+
+      const payload = (await response.json()) as Record<string, unknown>;
+      referenceRun = normalizeReferenceRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
   async function loadCatalog() {
     try {
       const response = await fetch(
@@ -228,6 +430,10 @@
     } catch {
       readiness = null;
     }
+  }
+
+  $: if (availableAssets.length > 0 && !availableAssets.some((asset) => asset.assetId === referenceAssetId)) {
+    referenceAssetId = availableAssets[0].assetId;
   }
 
   $: activeProjectId = data.projectId || 'default';
@@ -342,6 +548,170 @@
         </button>
       </div>
     </div>
+  </section>
+
+  <section class="panel fade-in">
+    <h3>Referencias de asset (ComfyUI encapsulado)</h3>
+    <p class="muted">
+      Selecciona el asset, el modo de trabajo y deja que el runner canónico gestione la operación.
+      No se expone el canvas de ComfyUI.
+    </p>
+
+    <div class="asset-form">
+      <div class="form-row">
+        <label>
+          Asset:
+          <select bind:value={referenceAssetId} data-testid="asset-reference-asset-id">
+            {#if availableAssets.length === 0}
+              <option value="">Sin assets disponibles</option>
+            {:else}
+              {#each availableAssets as asset}
+                <option value={asset.assetId}>{asset.label} ({asset.assetId})</option>
+              {/each}
+            {/if}
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Modo:
+          <select bind:value={referenceMode} data-testid="asset-reference-mode">
+            <option value="import">Importar referencias existentes</option>
+            <option value="generate">Generar referencias desde brief</option>
+          </select>
+        </label>
+      </div>
+
+      {#if referenceMode === 'generate'}
+        <div class="form-row">
+          <label>
+            Brief simplificado:
+            <textarea
+              bind:value={referenceBrief}
+              rows="4"
+              placeholder="Describe la referencia deseada en lenguaje natural"
+              data-testid="asset-reference-brief"
+            ></textarea>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>
+            Preset de producto:
+            <select bind:value={referencePresetId} data-testid="asset-reference-preset-id">
+              {#each REFERENCE_PRESET_OPTIONS as presetId}
+                <option value={presetId}>{presetId}</option>
+              {/each}
+            </select>
+          </label>
+        </div>
+      {/if}
+
+      <div class="form-row">
+        <label>
+          Rutas fuente (una por línea):
+          <textarea
+            bind:value={referenceSourcePathsText}
+            rows="3"
+            placeholder="/ruta/a/ref-01.png"
+            data-testid="asset-reference-source-paths"
+          ></textarea>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Notas operativas:
+          <input
+            type="text"
+            bind:value={referenceNotes}
+            placeholder="Opcional: contexto extra para la corrida"
+          />
+        </label>
+      </div>
+
+      {#if selectedReferenceNotes()}
+        <p class="muted target-notes">
+          {selectedReferenceNotes()}
+        </p>
+      {/if}
+
+      <div class="row-actions">
+        <button
+          on:click={handleReferenceSubmit}
+          disabled={referenceSubmitting || !referenceAssetId}
+          data-testid="asset-reference-submit"
+        >
+          {referenceSubmitting ? 'Procesando...' : 'Ejecutar referencia'}
+        </button>
+        <button on:click={refreshReferenceStatus} disabled={!referenceRun?.run_id} data-testid="asset-reference-refresh">
+          Refrescar estado
+        </button>
+        <button
+          on:click={cancelReferenceRun}
+          disabled={!canCancel(referenceRun)}
+          data-testid="asset-reference-cancel"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      {#if referenceError}
+        <p class="error-inline">{referenceError}</p>
+      {/if}
+    </div>
+
+    {#if referenceRun}
+      <div class="reference-run-results">
+        <div class="inline-meta">
+          <span class="badge tone-{runStatusTone(referenceRun.status)}" data-testid="asset-reference-run-status">
+            {referenceRun.status}
+          </span>
+          <span class="code-chip">{referenceRun.run_id}</span>
+          <span class="code-chip">{referenceRun.target_id}</span>
+        </div>
+
+        <p data-testid="asset-reference-run-message">{referenceRun.message}</p>
+
+        <p>
+          <strong>Evidencia:</strong>
+          <code data-testid="asset-reference-evidence-path">{referenceRun.evidence_path || 'sin evidencia aún'}</code>
+        </p>
+
+        <div data-testid="asset-reference-artifacts">
+          <strong>Artefactos:</strong>
+          {#if referenceRun.artifact_refs.length === 0}
+            <p class="muted">Sin artefactos publicados.</p>
+          {:else}
+            <ul class="list artifact-list">
+              {#each referenceRun.artifact_refs as artifact}
+                <li>
+                  <code>{artifact}</code>
+                  {#if isImagePath(artifact)}
+                    <span class="muted"> · preview image</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div>
+          <strong>Checkpoints:</strong>
+          {#if referenceRun.progress_events.length === 0}
+            <p class="muted">Sin checkpoints reportados por el runner.</p>
+          {:else}
+            <ul class="list progress-list">
+              {#each referenceRun.progress_events as event}
+                <li>
+                  <code>{event.step_id}</code> · {event.state} · {event.message}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+    {/if}
   </section>
 
   <section class="panel fade-in">
@@ -462,11 +832,13 @@
   }
 
   .form-row input,
-  .form-row select {
+  .form-row select,
+  .form-row textarea {
     padding: 0.5rem;
     border: 1px solid var(--border-color, #e0e0e0);
     border-radius: 4px;
     font-size: 0.9rem;
+    font-family: inherit;
   }
 
   .form-row button {
@@ -478,7 +850,8 @@
     cursor: pointer;
   }
 
-  .form-row button:disabled {
+  .form-row button:disabled,
+  .row-actions button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -540,5 +913,45 @@
     background: #f8d7da;
     border: 1px solid #f5c6cb;
     color: #721c24;
+  }
+
+  .error-inline {
+    margin: 0;
+    color: #721c24;
+    font-weight: 600;
+  }
+
+  .target-notes {
+    margin: 0;
+  }
+
+  .reference-run-results {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    padding-top: 1rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .inline-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .code-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  }
+
+  .artifact-list,
+  .progress-list {
+    margin-top: 0.35rem;
   }
 </style>

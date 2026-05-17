@@ -676,7 +676,7 @@ como engine detras del contrato canonico. El backend base de fase queda en
   operacion backend canonica para referencias de assets antes de la e2e UI
   — `done`
 - [`19.1`](tasks/19.1-ui-asset-reference-images.md): implementar la capa UI de
-  referencias con `ComfyUI` completamente encapsulado
+  referencias con `ComfyUI` completamente encapsulado — `done`
 - [`19.2`](tasks/19.2-phase19-e2e-proof.md): probar una corrida real de
   referencias con evidencia y cancelacion
 

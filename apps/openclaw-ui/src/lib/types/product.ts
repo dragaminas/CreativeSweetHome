@@ -193,6 +193,54 @@ export interface StartRunPayload {
   options?: Record<string, unknown>;
 }
 
+export type RunnerExecutionStatus =
+  | 'queued'
+  | 'running'
+  | 'pass'
+  | 'soft_pass_with_fallback'
+  | 'fail_compile'
+  | 'fail_runtime'
+  | 'fail_quality'
+  | 'blocked_missing_asset'
+  | 'cancelled'
+  | string;
+
+export interface RunnerProgressEvent {
+  at?: string;
+  step_id: string;
+  state: string;
+  message: string;
+}
+
+export interface AssetReferenceRunSummary {
+  runner_id: string;
+  operation_kind: string;
+  target_id: string;
+  run_id: string;
+  accepted: boolean;
+  status: RunnerExecutionStatus;
+  message: string;
+  artifact_refs: string[];
+  manifest_path?: string;
+  summary_path?: string;
+  evidence_path?: string;
+  progress_events: RunnerProgressEvent[];
+}
+
+export interface StartAssetReferenceRunInput {
+  mode: 'import' | 'generate';
+  projectId: string;
+  sceneId: string;
+  assetKind: 'character' | 'object';
+  assetId: string;
+  briefText?: string;
+  presetId?: string;
+  referenceSourcePaths?: string[];
+  notes?: string;
+  requestedBy?: string;
+  channel?: string;
+}
+
 export interface EmbedWorkspaceSeam {
   workspaceId: string;
   sameOriginPath: ProductRoute;

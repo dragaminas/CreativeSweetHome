@@ -165,6 +165,22 @@ La prueba browser-backed de `17.2` valida este flujo desde
 creacion real de `scene-storage.json`, `assets.json`, `shot.json` y la
 estructura de `Exports/<project>/<shot>/{blender,comfyui}/...`.
 
+Para `UX-04` (phase `19`) el workspace `/workspaces/assets` ya expone el flujo
+de referencias encapsulado sobre `comfyui operate`:
+
+- `reference_import`: copia rutas fuente declaradas hacia
+  `STUDIO_DIR/Scenes/<project>/<scene>/assets/<kind>/<asset_id>/references/published/`
+- `reference_generate`: registra solicitud estructurada en
+  `.../references/requests/<run_id>__request.json` con brief traducido desde
+  inputs de producto
+- feedback de run: estado legible, checkpoints, artefactos y ruta de evidencia
+  (`STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`) sin exponer canvas de
+  `ComfyUI`
+
+La prueba browser-backed `phase19-asset-references` valida la importacion real
+de una referencia desde la UI y confirma persistencia canonica + actualizacion
+de etapa `reference_image` para el asset.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

@@ -2,9 +2,12 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 import type {
+  AssetReferenceRunSummary,
   RunnerCatalog,
   RunnerDescriptionRecord,
+  RunnerProgressEvent,
   RunnerTargetRecord,
+  StartAssetReferenceRunInput,
   StartRunPayload
 } from '$lib/types/product';
 import { resolveRepoContext } from './env';
@@ -13,6 +16,63 @@ interface ProcessResult {
   code: number;
   stdout: string;
   stderr: string;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+function progressEventsFromMetadata(value: unknown): RunnerProgressEvent[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => asRecord(entry))
+    .filter((entry) => asString(entry.step_id))
+    .map((entry) => ({
+      at: asString(entry.at) || undefined,
+      step_id: asString(entry.step_id),
+      state: asString(entry.state, 'unknown'),
+      message: asString(entry.message, '')
+    }));
+}
+
+function toAssetReferenceRunSummary(payload: Record<string, unknown>): AssetReferenceRunSummary {
+  const metadata = asRecord(payload.metadata);
+
+  return {
+    runner_id: asString(payload.runner_id, 'comfyui'),
+    operation_kind: asString(payload.operation_kind, 'operate'),
+    target_id: asString(payload.target_id),
+    run_id: asString(payload.run_id),
+    accepted: asBoolean(payload.accepted, true),
+    status: asString(payload.status),
+    message: asString(payload.message),
+    artifact_refs: asStringArray(payload.artifact_refs),
+    manifest_path: asString(payload.manifest_path) || undefined,
+    summary_path: asString(payload.summary_path) || undefined,
+    evidence_path: asString(payload.evidence_path) || undefined,
+    progress_events: progressEventsFromMetadata(metadata.progress_events)
+  };
 }
 
 function runnerCommand(): { command: string; args: string[]; env: NodeJS.ProcessEnv; cwd: string } {
@@ -143,6 +203,33 @@ export async function startRun(payload: StartRunPayload): Promise<Record<string,
   args.push('--options-json', JSON.stringify(payload.options || {}));
 
   return runCliJson<Record<string, unknown>>(args);
+}
+
+export async function startAssetReferenceRun(
+  input: StartAssetReferenceRunInput
+): Promise<AssetReferenceRunSummary> {
+  const targetId =
+    input.mode === 'import' ? 'asset-reference-import' : 'asset-reference-generate';
+
+  const response = await startRun({
+    runner_id: 'comfyui',
+    operation_kind: 'operate',
+    target_id: targetId,
+    requested_by: input.requestedBy || 'openclaw-ui',
+    channel: input.channel || 'web-ui',
+    inputs: {
+      project_id: input.projectId,
+      scene_id: input.sceneId,
+      asset_kind: input.assetKind,
+      asset_id: input.assetId,
+      brief_text: asString(input.briefText),
+      preset_id: asString(input.presetId, 'uc-img-02-frame-baseline-preview'),
+      reference_source_paths: input.referenceSourcePaths || [],
+      notes: asString(input.notes)
+    }
+  });
+
+  return toAssetReferenceRunSummary(response);
 }
 
 export async function getRunStatus(

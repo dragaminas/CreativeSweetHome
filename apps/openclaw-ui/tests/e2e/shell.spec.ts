@@ -481,3 +481,92 @@ test.describe('phase18-asset-catalog', () => {
     expect(objectEntry).toBeDefined();
   });
 });
+
+test.describe('phase19-asset-references', () => {
+  test('imports asset reference files from the assets workspace and persists canonical evidence', async ({
+    page,
+    request
+  }) => {
+    const uniqueSuffix = Date.now();
+    const projectId = `phase19-proof-${uniqueSuffix}`;
+    const sceneId = 'asset-reference-scene';
+    const shotId = 'sh010';
+    const assetLabel = `NoraRef-${uniqueSuffix}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: assetLabel,
+        description: 'Piloto principal para pruebas de referencias.'
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+
+    const tempRefsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-phase19-refs-'));
+    const sourceReferencePath = path.join(tempRefsDir, 'ref-001.png');
+    await fs.writeFile(sourceReferencePath, 'not-a-real-image-but-valid-file-copy', 'utf8');
+
+    const expectedPublishedReferencePath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      projectId,
+      sceneId,
+      'assets',
+      'characters',
+      createAssetPayload.assetId,
+      'references',
+      'published',
+      `${createAssetPayload.assetId}__ref__001.png`
+    );
+
+    await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+
+    await page.getByTestId('asset-reference-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('asset-reference-mode').selectOption('import');
+    await page.getByTestId('asset-reference-source-paths').fill(sourceReferencePath);
+    await page.getByTestId('asset-reference-submit').click();
+
+    await expect(page.getByTestId('asset-reference-run-status')).toContainText('pass');
+    await expect(page.getByTestId('asset-reference-run-message')).toContainText(
+      'Referencias importadas'
+    );
+    await expect(page.getByTestId('asset-reference-artifacts')).toContainText(
+      `${createAssetPayload.assetId}__ref__001.png`
+    );
+    await expect(page.getByTestId('asset-reference-evidence-path')).toContainText(
+      '/Validation/comfyui/operate/'
+    );
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedPublishedReferencePath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
+
+    const listResponse = await request.get(
+      `/api/assets?projectId=${projectId}&sceneId=${sceneId}&kind=character`
+    );
+    expect(listResponse.ok()).toBeTruthy();
+    const listPayload = (await listResponse.json()) as {
+      assets: Array<{ assetId: string; stage: string; stageState: string }>;
+    };
+    const updatedAsset = listPayload.assets.find((entry) => entry.assetId === createAssetPayload.assetId);
+    expect(updatedAsset?.stage).toBe('reference_image');
+    expect(updatedAsset?.stageState).toBe('ready');
+  });
+});
