@@ -38,6 +38,29 @@ for task_file in "$TASK_DIR"/*.md; do
     printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'task-status-index-reference'
     failures=1
   fi
+
+  if rg -q '^`pending`$' "$task_file"; then
+    if ! rg -q '^- Target changed files \(soft cap\):' "$task_file"; then
+      printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'scope-budget-soft-cap'
+      failures=1
+    fi
+    if ! rg -q '^- Hard cap \(must stop and split\):' "$task_file"; then
+      printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'scope-budget-hard-cap'
+      failures=1
+    fi
+    if ! rg -q '^- Overflow protocol:' "$task_file"; then
+      printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'scope-budget-overflow-protocol'
+      failures=1
+    fi
+    if ! rg -q '^## Source of Truth Matrix$' "$task_file"; then
+      printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'source-of-truth-matrix-section'
+      failures=1
+    fi
+    if ! rg -q '^## Implementation Contract \(No-Drift\)$' "$task_file"; then
+      printf 'missing:%s:%s\n' "${task_file#$REPO_ROOT/}" 'implementation-contract-no-drift'
+      failures=1
+    fi
+  fi
 done
 
 changed_task_files=()
@@ -94,6 +117,42 @@ for task_file in "${changed_task_files[@]}"; do
   fi
 
   if rg -q '^`pending`$' "$task_file"; then
+    if ! rg -q '^- Target changed files \(soft cap\):' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'scope-budget-soft-cap'
+      failures=1
+    fi
+    if ! rg -q '^- Hard cap \(must stop and split\):' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'scope-budget-hard-cap'
+      failures=1
+    fi
+    if ! rg -q '^- Overflow protocol:' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'scope-budget-overflow-protocol'
+      failures=1
+    fi
+
+    if ! rg -q '^## Source of Truth Matrix$' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'source-of-truth-matrix-section'
+      failures=1
+    else
+      if ! rg -q '^- Authoritative Source:' "$task_file"; then
+        printf 'missing:%s:%s\n' "$relative_task_path" 'source-of-truth-authoritative-source'
+        failures=1
+      fi
+      if ! rg -q '^- Derived/Projection Artifacts:' "$task_file"; then
+        printf 'missing:%s:%s\n' "$relative_task_path" 'source-of-truth-derived-artifacts'
+        failures=1
+      fi
+      if ! rg -q '^- Reconciliation Command:' "$task_file"; then
+        printf 'missing:%s:%s\n' "$relative_task_path" 'source-of-truth-reconciliation-command'
+        failures=1
+      fi
+    fi
+
+    if ! rg -q '^## Implementation Contract \(No-Drift\)$' "$task_file"; then
+      printf 'missing:%s:%s\n' "$relative_task_path" 'implementation-contract-no-drift'
+      failures=1
+    fi
+
     if ! rg -q '^## Scope Budget' "$task_file"; then
       printf 'missing:%s:%s\n' "$relative_task_path" 'scope-budget-section'
       failures=1
