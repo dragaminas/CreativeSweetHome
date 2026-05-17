@@ -1,6 +1,6 @@
 {
   "id": "sc001",
-  "name": "Opening Alley",
-  "description": "Initial scene scaffolded from filesystem.",
+  "name": "Sc001",
+  "description": "Scene loaded from canonical scene manifests.",
   "scriptId": "script-main"
 }

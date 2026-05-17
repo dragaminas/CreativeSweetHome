@@ -1,7 +1,7 @@
 {
   "id": "pilot-project",
   "name": "Pilot Project",
-  "description": "Filesystem-backed pilot project.",
+  "description": "Project loaded from /home/eric/Studio/Scenes/pilot-project.",
   "scriptIds": [
     "script-main"
   ]

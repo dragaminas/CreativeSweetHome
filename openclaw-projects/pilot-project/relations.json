@@ -6,54 +6,128 @@
   ],
   "assetOrder": {
     "characters": [
-      "asset-nora"
+      "chr-001",
+      "chr-002",
+      "chr-003",
+      "chr-004",
+      "chr-005",
+      "chr-006",
+      "chr-007"
     ],
-    "objects": [],
-    "locations": [
-      "loc-alley"
-    ]
+    "objects": [
+      "obj-001",
+      "obj-002",
+      "obj-003",
+      "obj-004",
+      "obj-005"
+    ],
+    "locations": []
   },
   "scenes": {
     "sc001": {
-      "shotOrder": [
-        "sh010"
-      ],
+      "shotOrder": [],
       "assetIds": [
-        "asset-nora",
-        "loc-alley"
+        "chr-001",
+        "chr-002",
+        "chr-003",
+        "chr-004",
+        "chr-005",
+        "chr-006",
+        "chr-007",
+        "obj-001",
+        "obj-002",
+        "obj-003",
+        "obj-004",
+        "obj-005"
       ],
-      "locationIds": [
-        "loc-alley"
-      ]
+      "locationIds": []
     }
   },
-  "shots": {
-    "sh010": {
-      "sceneId": "sc001",
-      "assetIds": [
-        "asset-nora",
-        "loc-alley"
-      ]
-    }
-  },
+  "shots": {},
   "assets": {
-    "asset-nora": {
+    "chr-001": {
       "kind": "character",
       "sceneIds": [
         "sc001"
       ],
-      "shotIds": [
-        "sh010"
-      ]
+      "shotIds": []
     },
-    "loc-alley": {
-      "kind": "location",
+    "chr-002": {
+      "kind": "character",
       "sceneIds": [
         "sc001"
       ],
-      "shotIds": [
-        "sh010"
-      ]
+      "shotIds": []
+    },
+    "chr-003": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "chr-004": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "chr-005": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "chr-006": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "chr-007": {
+      "kind": "character",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "obj-001": {
+      "kind": "object",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "obj-002": {
+      "kind": "object",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "obj-003": {
+      "kind": "object",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "obj-004": {
+      "kind": "object",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
+    },
+    "obj-005": {
+      "kind": "object",
+      "sceneIds": [
+        "sc001"
+      ],
+      "shotIds": []
     }
   }
 }
