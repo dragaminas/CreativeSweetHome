@@ -127,6 +127,9 @@ Responsabilidades:
 
 - mantener una identidad unica de `Project`, `Scene`, `Shot`, `AssetDefinition`
   y `Location`
+- tratar `STUDIO_DIR/Scenes/...` como autoridad operativa de estado de
+  escena/asset/shot/proyecto y `openclaw-projects/...` como proyeccion derivada
+  reconciliada
 - registrar estado por etapa (`StageState`) para habilitar gates de
   automatizacion
 - mapear cada corrida de backend a `OperationRef` y cada output a `ArtifactRef`
