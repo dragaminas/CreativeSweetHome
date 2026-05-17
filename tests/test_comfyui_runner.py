@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from openclaw_studio.runners import StartRunRequest
 from openclaw_studio.runners.comfyui import ComfyUIRunner
@@ -87,20 +88,127 @@ class ComfyUIRunnerTests(unittest.TestCase):
             str(evidence_dir / "summary.md"),
         )
 
-    def test_atomic_validation_routes_through_same_runner_as_unsupported(self) -> None:
+    def test_atomic_validation_routes_through_same_runner(self) -> None:
+        with patch.object(self.runner, "spawn_worker", return_value=12345):
+            response = self.runner.start_run(
+                StartRunRequest(
+                    runner_id="comfyui",
+                    operation_kind="validate_atomic",
+                    target_id="AT-IMG-02-01",
+                    requested_by="tests",
+                    channel="tests",
+                    run_id="atomic-test-001",
+                )
+            )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "queued")
+        self.assertEqual(response.operation_kind, "validate_atomic")
+        self.assertEqual(response.target_id, "AT-IMG-02-01")
+
+    def test_operate_targets_include_asset_reference_import_and_generate(self) -> None:
+        targets = self.runner.list_targets("operate")
+        target_ids = {target.target_id for target in targets}
+
+        self.assertIn("asset-reference-import", target_ids)
+        self.assertIn("asset-reference-generate", target_ids)
+
+    def test_operate_asset_reference_import_publishes_references(self) -> None:
+        source_a = self.root / "ref-a.png"
+        source_b = self.root / "ref-b.jpg"
+        source_a.write_bytes(b"ref-a")
+        source_b.write_bytes(b"ref-b")
+
         response = self.runner.start_run(
             StartRunRequest(
                 runner_id="comfyui",
-                operation_kind="validate_atomic",
-                target_id="AT-IMG-02-01",
+                operation_kind="operate",
+                target_id="asset-reference-import",
                 requested_by="tests",
                 channel="tests",
+                run_id="operate-import-001",
+                inputs={
+                    "project_id": "pilot-project",
+                    "scene_id": "sc001",
+                    "asset_kind": "character",
+                    "asset_id": "chr-001",
+                    "reference_source_paths": [str(source_a), str(source_b)],
+                },
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "pass")
+        self.assertIsNotNone(response.manifest_path)
+        self.assertIsNotNone(response.summary_path)
+        self.assertIsNotNone(response.evidence_path)
+        self.assertEqual(len(response.artifact_refs), 2)
+        for artifact_path in response.artifact_refs:
+            self.assertTrue(Path(artifact_path).exists())
+
+        summary_payload = json.loads(
+            Path(response.summary_path).read_text(encoding="utf-8")  # type: ignore[arg-type]
+        )
+        self.assertEqual(summary_payload["status"], "pass")
+        self.assertEqual(summary_payload["operation_kind"], "operate")
+        self.assertEqual(summary_payload["target_id"], "asset-reference-import")
+        self.assertEqual(summary_payload["entity_refs"]["asset_id"], "chr-001")
+
+        status = self.runner.get_run_status("operate-import-001")
+        self.assertEqual(status.status, "pass")
+        self.assertEqual(status.operation_kind, "operate")
+
+    def test_operate_asset_reference_generate_requires_brief(self) -> None:
+        response = self.runner.start_run(
+            StartRunRequest(
+                runner_id="comfyui",
+                operation_kind="operate",
+                target_id="asset-reference-generate",
+                requested_by="tests",
+                channel="tests",
+                run_id="operate-generate-missing-brief",
+                inputs={
+                    "project_id": "pilot-project",
+                    "scene_id": "sc001",
+                    "asset_kind": "object",
+                    "asset_id": "obj-001",
+                },
             )
         )
 
         self.assertFalse(response.accepted)
-        self.assertEqual(response.status, "unsupported")
-        self.assertIn("validate_atomic", response.message)
+        self.assertEqual(response.status, "fail_compile")
+        self.assertIn("brief", response.message.lower())
+
+    def test_operate_asset_reference_generate_records_orchestration_request(self) -> None:
+        response = self.runner.start_run(
+            StartRunRequest(
+                runner_id="comfyui",
+                operation_kind="operate",
+                target_id="asset-reference-generate",
+                requested_by="tests",
+                channel="tests",
+                run_id="operate-generate-001",
+                inputs={
+                    "project_id": "pilot-project",
+                    "scene_id": "sc001",
+                    "asset_kind": "object",
+                    "asset_id": "obj-001",
+                    "brief_text": "drone industrial azul con textura metalica desgastada",
+                    "preset_id": "uc-img-02-frame-baseline-preview",
+                },
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "soft_pass_with_fallback")
+        self.assertTrue(len(response.artifact_refs) >= 1)
+        self.assertIsNotNone(response.summary_path)
+        summary_payload = json.loads(
+            Path(response.summary_path).read_text(encoding="utf-8")  # type: ignore[arg-type]
+        )
+        self.assertEqual(summary_payload["status"], "soft_pass_with_fallback")
+        self.assertEqual(summary_payload["target_id"], "asset-reference-generate")
 
 
 if __name__ == "__main__":
