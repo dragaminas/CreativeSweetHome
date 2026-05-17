@@ -2,6 +2,8 @@ from __future__ import annotations
 
 """Built-in catalog of guided creative flows for the studio CLI demo."""
 
+from dataclasses import dataclass
+
 from openclaw_studio.contracts.flows import (
     ExecutionVariant,
     FlowDefinition,
@@ -12,6 +14,55 @@ from openclaw_studio.contracts.flows import (
     OutputArtifactType,
     SelectableOption,
 )
+
+
+@dataclass(frozen=True)
+class ComfyUIOperateTargetSpec:
+    target_id: str
+    display_label: str
+    required_input_keys: tuple[str, ...]
+    optional_input_keys: tuple[str, ...] = ()
+    notes: str = ""
+
+
+COMFYUI_OPERATE_TARGET_SPECS = (
+    ComfyUIOperateTargetSpec(
+        target_id="asset-reference-import",
+        display_label="Importar referencias de asset",
+        required_input_keys=(
+            "project_id",
+            "scene_id",
+            "asset_kind",
+            "asset_id",
+            "reference_source_paths",
+        ),
+        optional_input_keys=("notes", "source"),
+        notes=(
+            "Copia referencias existentes a rutas canonicas de assets y publica "
+            "evidencia trazable para la etapa reference_image."
+        ),
+    ),
+    ComfyUIOperateTargetSpec(
+        target_id="asset-reference-generate",
+        display_label="Orquestar referencias de asset",
+        required_input_keys=(
+            "project_id",
+            "scene_id",
+            "asset_kind",
+            "asset_id",
+            "brief_text",
+        ),
+        optional_input_keys=("preset_id", "reference_source_paths", "notes"),
+        notes=(
+            "Registra un request estructurado listo para generar referencias con "
+            "ComfyUI sin exponer parametros de grafo en la capa de producto."
+        ),
+    ),
+)
+
+
+def list_comfyui_operate_target_specs() -> list[ComfyUIOperateTargetSpec]:
+    return list(COMFYUI_OPERATE_TARGET_SPECS)
 
 
 PROMPT_INPUT = FlowInputDefinition(

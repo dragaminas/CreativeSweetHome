@@ -4,6 +4,8 @@ import argparse
 import fcntl
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import time
@@ -25,6 +27,9 @@ from ..comfyui_smoke_validation import (
     list_atomic_case_specs,
     list_composed_case_specs,
 )
+from ..implementations.builtin_flow_catalog import (
+    list_comfyui_operate_target_specs,
+)
 from .contracts import (
     ACTIVE_RUN_STATUSES,
     RunResult,
@@ -42,6 +47,7 @@ RUNNER_ID = "comfyui"
 SMOKE_TARGET_ALIASES = {"", "all", "smoke", "smoke-suite", "suite"}
 ATOMIC_TARGET_ALIASES = {"", "all", "atomic", "atomic-suite", "suite"}
 COMPOSED_TARGET_ALIASES = {"", "all", "composed", "composed-suite", "suite"}
+OPERATE_KIND = "operate"
 
 
 def utc_now() -> str:
@@ -63,6 +69,63 @@ def flatten_case_artifacts(case_results: list[dict[str, Any]]) -> list[str]:
     for case_result in case_results:
         artifact_refs.extend(case_result.get("output_paths", []))
     return artifact_refs
+
+
+def sanitize_token(value: str | None, default: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return default
+    sanitized = re.sub(r"[^a-zA-Z0-9._-]+", "-", raw)
+    sanitized = sanitized.strip("._-")
+    return sanitized or default
+
+
+def parse_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        items = [item.strip() for item in value.split(",")]
+        return [item for item in items if item]
+    if isinstance(value, (list, tuple)):
+        result: list[str] = []
+        for item in value:
+            text = str(item).strip()
+            if text:
+                result.append(text)
+        return result
+    return [str(value).strip()] if str(value).strip() else []
+
+
+def normalize_asset_kind(value: Any) -> str:
+    kind = str(value or "").strip().lower()
+    if kind in {"character", "characters", "personaje", "personajes"}:
+        return "character"
+    if kind in {"object", "objects", "objeto", "objetos"}:
+        return "object"
+    return ""
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def append_progress_event(
+    payload: dict[str, Any],
+    *,
+    step_id: str,
+    state: str,
+    message: str,
+) -> None:
+    progress_events = payload.setdefault("progress_events", [])
+    progress_events.append(
+        {
+            "at": utc_now(),
+            "step_id": step_id,
+            "state": state,
+            "message": message,
+        }
+    )
 
 
 class JsonStateStore:
@@ -337,6 +400,24 @@ class ComfyUIRunner(Runner):
                 )
             return targets
 
+        if operation_kind == OPERATE_KIND:
+            targets: list[RunnerTarget] = []
+            for target_spec in list_comfyui_operate_target_specs():
+                targets.append(
+                    RunnerTarget(
+                        target_id=target_spec.target_id,
+                        display_label=target_spec.display_label,
+                        target_kind="use_case",
+                        operation_kind=OPERATE_KIND,
+                        metadata={
+                            "required_inputs": list(target_spec.required_input_keys),
+                            "optional_inputs": list(target_spec.optional_input_keys),
+                            "notes": target_spec.notes,
+                        },
+                    )
+                )
+            return targets
+
         return []
 
     def start_run(self, request: StartRunRequest) -> StartRunResponse:
@@ -407,6 +488,24 @@ class ComfyUIRunner(Runner):
             )
             paths = self.build_validation_paths(run_id, "composed")
             accepted = True
+        elif request.operation_kind == OPERATE_KIND:
+            try:
+                target_id = self.normalize_operate_target(request.target_id)
+            except ValueError as error:
+                return StartRunResponse(
+                    runner_id=RUNNER_ID,
+                    operation_kind=request.operation_kind,
+                    target_id=request.target_id,
+                    run_id=request.run_id,
+                    accepted=False,
+                    status="fail_compile",
+                    message=str(error),
+                )
+            run_id = request.run_id or datetime.now(timezone.utc).strftime(
+                "operate-%Y%m%d-%H%M%S"
+            )
+            paths = self.build_validation_paths(run_id, "operate")
+            accepted = True
         else:
             return StartRunResponse(
                 runner_id=RUNNER_ID,
@@ -449,10 +548,63 @@ class ComfyUIRunner(Runner):
                 evidence_path=str(paths["evidence_path"]),
             )
 
-        paths["validation_root"].mkdir(parents=True, exist_ok=True)
-        paths["logs_dir"].mkdir(parents=True, exist_ok=True)
-        paths["manifests_dir"].mkdir(parents=True, exist_ok=True)
-        paths["evidence_dir"].mkdir(parents=True, exist_ok=True)
+        if request.operation_kind == OPERATE_KIND:
+            validation_error = self.validate_operate_inputs(target_id, request.inputs)
+            if validation_error is not None:
+                return StartRunResponse(
+                    runner_id=RUNNER_ID,
+                    operation_kind=request.operation_kind,
+                    target_id=target_id,
+                    run_id=run_id,
+                    accepted=False,
+                    status="fail_compile",
+                    message=validation_error,
+                )
+
+        for dir_key in (
+            "validation_root",
+            "logs_dir",
+            "manifests_dir",
+            "evidence_dir",
+            "fixtures_dir",
+            "published_dir",
+            "output_dir",
+        ):
+            directory = paths.get(dir_key)
+            if isinstance(directory, Path):
+                directory.mkdir(parents=True, exist_ok=True)
+
+        if request.operation_kind == OPERATE_KIND:
+            payload = self.execute_operate_request(
+                request=request,
+                run_id=run_id,
+                target_id=target_id,
+                paths=paths,
+            )
+            write_json(paths["manifest_path"], payload)
+            write_json(paths["summary_path"], payload)
+            paths["evidence_path"].write_text(
+                self.render_operate_evidence_markdown(payload),
+                encoding="utf-8",
+            )
+            return StartRunResponse(
+                runner_id=RUNNER_ID,
+                operation_kind=request.operation_kind,
+                target_id=target_id,
+                run_id=run_id,
+                accepted=True,
+                status=payload["status"],
+                message=payload["message"],
+                manifest_path=str(paths["manifest_path"]),
+                summary_path=str(paths["summary_path"]),
+                evidence_path=str(paths["evidence_path"]),
+                artifact_refs=list(payload.get("artifact_refs", [])),
+                metadata={
+                    "validation_root": str(paths["validation_root"]),
+                    "entity_refs": dict(payload.get("entity_refs", {})),
+                    "progress_events": list(payload.get("progress_events", [])),
+                },
+            )
 
         state_payload = {
             "runner_id": RUNNER_ID,
@@ -562,12 +714,12 @@ class ComfyUIRunner(Runner):
         requested_by: str,
         channel: str,
     ) -> RunStatus:
-        paths = self.build_smoke_paths(run_id)
-        if not paths["manifest_path"].exists():
-            return self.get_run_status(run_id)
+        payload = self.load_run_payload(run_id)
+        manifest_path = payload.get("manifest_path")
+        if not manifest_path:
+            return self.payload_to_status(payload)
 
-        state_store = JsonStateStore(paths["manifest_path"])
-        payload = state_store.read()
+        state_store = JsonStateStore(Path(manifest_path))
         if payload["status"] in TERMINAL_RUN_STATUSES:
             return self.payload_to_status(payload)
 
@@ -784,6 +936,339 @@ class ComfyUIRunner(Runner):
 
         return self.get_run_result(run_id)
 
+    def normalize_operate_target(self, target_id: str | None) -> str:
+        normalized_target_id = str(target_id or "").strip()
+        known_target_ids = {
+            spec.target_id for spec in list_comfyui_operate_target_specs()
+        }
+        if not normalized_target_id:
+            raise ValueError(
+                "target_id es obligatorio para operation_kind='operate' en comfyui."
+            )
+        if normalized_target_id not in known_target_ids:
+            raise ValueError(
+                "target_id desconocido para operate en comfyui: "
+                f"{normalized_target_id!r}."
+            )
+        return normalized_target_id
+
+    def validate_operate_inputs(
+        self,
+        target_id: str,
+        inputs: dict[str, Any],
+    ) -> str | None:
+        target_specs = {
+            spec.target_id: spec for spec in list_comfyui_operate_target_specs()
+        }
+        target_spec = target_specs.get(target_id)
+        if target_spec is None:
+            return f"target_id desconocido para operate: {target_id!r}."
+
+        for required_key in target_spec.required_input_keys:
+            if required_key == "reference_source_paths":
+                references = parse_string_list(inputs.get("reference_source_paths"))
+                if not references:
+                    return (
+                        "asset-reference-import requiere reference_source_paths "
+                        "con al menos una ruta."
+                    )
+                continue
+
+            if required_key == "brief_text":
+                brief_text = str(
+                    inputs.get("brief_text") or inputs.get("prompt") or ""
+                ).strip()
+                if not brief_text:
+                    return (
+                        "asset-reference-generate requiere brief_text "
+                        "estructurado en inputs."
+                    )
+                continue
+
+            raw_value = str(inputs.get(required_key) or "").strip()
+            if not raw_value:
+                return (
+                    f"{target_id} requiere {required_key} en inputs "
+                    "para operar en modo canonico."
+                )
+
+        if normalize_asset_kind(inputs.get("asset_kind")) == "":
+            return "asset_kind debe ser character u object."
+
+        return None
+
+    def resolve_asset_reference_root(self, entity_refs: dict[str, str]) -> Path:
+        kind_dir = "characters" if entity_refs["asset_kind"] == "character" else "objects"
+        return (
+            self.studio_dir
+            / "Scenes"
+            / entity_refs["project_id"]
+            / entity_refs["scene_id"]
+            / "assets"
+            / kind_dir
+            / entity_refs["asset_id"]
+            / "references"
+        )
+
+    def resolve_reference_source_path(self, raw_path: str) -> Path:
+        source_path = Path(raw_path).expanduser()
+        if source_path.is_absolute():
+            return source_path
+        return (self.repo_root / source_path).resolve()
+
+    def execute_operate_request(
+        self,
+        *,
+        request: StartRunRequest,
+        run_id: str,
+        target_id: str,
+        paths: dict[str, Path],
+    ) -> dict[str, Any]:
+        entity_refs = {
+            "project_id": sanitize_token(str(request.inputs.get("project_id")), "default"),
+            "scene_id": sanitize_token(str(request.inputs.get("scene_id")), "scene-draft"),
+            "asset_kind": normalize_asset_kind(request.inputs.get("asset_kind")),
+            "asset_id": sanitize_token(str(request.inputs.get("asset_id")), "asset-unknown"),
+        }
+        payload: dict[str, Any] = {
+            "runner_id": RUNNER_ID,
+            "operation_kind": OPERATE_KIND,
+            "target_id": target_id,
+            "run_id": run_id,
+            "status": "running",
+            "message": f"Iniciando {target_id} en modo canonico.",
+            "requested_by": request.requested_by,
+            "channel": request.channel,
+            "validation_root": str(paths["validation_root"]),
+            "manifest_path": str(paths["manifest_path"]),
+            "summary_path": str(paths["summary_path"]),
+            "evidence_path": str(paths["evidence_path"]),
+            "artifact_refs": [],
+            "case_results": [],
+            "entity_refs": entity_refs,
+            "current_target_id": target_id,
+            "current_prompt_id": None,
+            "prompt_ids": {},
+            "cancel_requested": False,
+            "requested_at": utc_now(),
+            "started_at": utc_now(),
+            "completed_at": None,
+            "updated_at": utc_now(),
+            "worker_pid": None,
+            "stdout_log_path": str(paths["stdout_log_path"]),
+            "stderr_log_path": str(paths["stderr_log_path"]),
+            "gate_pass": None,
+            "progress_events": [],
+            "inputs_echo": {
+                "project_id": entity_refs["project_id"],
+                "scene_id": entity_refs["scene_id"],
+                "asset_kind": entity_refs["asset_kind"],
+                "asset_id": entity_refs["asset_id"],
+            },
+        }
+        append_progress_event(
+            payload,
+            step_id="request-accepted",
+            state="done",
+            message=f"Run {run_id} aceptado para {target_id}.",
+        )
+
+        if target_id == "asset-reference-import":
+            return self.execute_asset_reference_import(payload, request.inputs)
+        if target_id == "asset-reference-generate":
+            return self.execute_asset_reference_generate(payload, request.inputs)
+
+        payload["status"] = "fail_compile"
+        payload["message"] = f"target_id no implementado: {target_id!r}."
+        payload["completed_at"] = utc_now()
+        payload["updated_at"] = utc_now()
+        append_progress_event(
+            payload,
+            step_id="request-rejected",
+            state="failed",
+            message=payload["message"],
+        )
+        return payload
+
+    def execute_asset_reference_import(
+        self,
+        payload: dict[str, Any],
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        references_root = self.resolve_asset_reference_root(payload["entity_refs"])
+        published_dir = references_root / "published"
+        published_dir.mkdir(parents=True, exist_ok=True)
+        append_progress_event(
+            payload,
+            step_id="prepare-target-paths",
+            state="done",
+            message=f"Ruta canonica lista en {published_dir}.",
+        )
+
+        source_paths = parse_string_list(inputs.get("reference_source_paths"))
+        artifact_refs: list[str] = []
+        copied_sources: list[dict[str, str]] = []
+        missing_sources: list[str] = []
+        for index, raw_source_path in enumerate(source_paths, start=1):
+            source_path = self.resolve_reference_source_path(raw_source_path)
+            if not source_path.exists() or not source_path.is_file():
+                missing_sources.append(str(source_path))
+                continue
+
+            suffix = source_path.suffix.lower() or ".bin"
+            target_path = (
+                published_dir
+                / f"{payload['entity_refs']['asset_id']}__ref__{index:03d}{suffix}"
+            )
+            shutil.copy2(source_path, target_path)
+            artifact_refs.append(str(target_path))
+            copied_sources.append(
+                {
+                    "source_path": str(source_path),
+                    "published_path": str(target_path),
+                }
+            )
+
+        payload["artifact_refs"] = artifact_refs
+        payload["copied_sources"] = copied_sources
+        payload["missing_sources"] = missing_sources
+        if artifact_refs:
+            payload["status"] = "pass"
+            payload["message"] = (
+                "Referencias importadas en rutas canonicas del asset "
+                f"({len(artifact_refs)} archivo(s))."
+            )
+            append_progress_event(
+                payload,
+                step_id="publish-references",
+                state="done",
+                message=payload["message"],
+            )
+        else:
+            payload["status"] = "blocked_missing_asset"
+            payload["message"] = (
+                "No se pudieron importar referencias: ninguna ruta fuente "
+                "existente fue encontrada."
+            )
+            append_progress_event(
+                payload,
+                step_id="publish-references",
+                state="blocked",
+                message=payload["message"],
+            )
+
+        payload["current_target_id"] = None
+        payload["completed_at"] = utc_now()
+        payload["updated_at"] = utc_now()
+        return payload
+
+    def execute_asset_reference_generate(
+        self,
+        payload: dict[str, Any],
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        references_root = self.resolve_asset_reference_root(payload["entity_refs"])
+        requests_dir = references_root / "requests"
+        requests_dir.mkdir(parents=True, exist_ok=True)
+        request_path = requests_dir / f"{payload['run_id']}__request.json"
+
+        brief_text = str(inputs.get("brief_text") or inputs.get("prompt") or "").strip()
+        preset_id = str(
+            inputs.get("preset_id") or "uc-img-02-frame-baseline-preview"
+        ).strip()
+        request_payload = {
+            "run_id": payload["run_id"],
+            "target_id": payload["target_id"],
+            "project_id": payload["entity_refs"]["project_id"],
+            "scene_id": payload["entity_refs"]["scene_id"],
+            "asset_kind": payload["entity_refs"]["asset_kind"],
+            "asset_id": payload["entity_refs"]["asset_id"],
+            "brief_text": brief_text,
+            "preset_id": preset_id,
+            "reference_source_paths": parse_string_list(
+                inputs.get("reference_source_paths")
+            ),
+            "requested_at": payload["requested_at"],
+            "requested_by": payload["requested_by"],
+            "channel": payload["channel"],
+            "notes": str(inputs.get("notes") or "").strip(),
+        }
+        write_json(request_path, request_payload)
+        append_progress_event(
+            payload,
+            step_id="persist-generation-request",
+            state="done",
+            message=f"Solicitud estructurada registrada en {request_path}.",
+        )
+
+        payload["artifact_refs"] = [str(request_path)]
+        payload["status"] = "soft_pass_with_fallback"
+        payload["message"] = (
+            "Solicitud de generacion registrada. La ejecucion de ComfyUI queda "
+            "encapsulada y pendiente de orquestacion de runtime."
+        )
+        payload["generation_request_path"] = str(request_path)
+        payload["current_target_id"] = None
+        payload["completed_at"] = utc_now()
+        payload["updated_at"] = utc_now()
+        append_progress_event(
+            payload,
+            step_id="close-run",
+            state="done",
+            message=payload["message"],
+        )
+        return payload
+
+    def render_operate_evidence_markdown(self, payload: dict[str, Any]) -> str:
+        lines = [
+            "# ComfyUI operate evidence",
+            "",
+            f"- run_id: `{payload['run_id']}`",
+            f"- target_id: `{payload.get('target_id')}`",
+            f"- status: `{payload.get('status')}`",
+            f"- message: {payload.get('message')}",
+        ]
+        entity_refs = payload.get("entity_refs", {})
+        if entity_refs:
+            lines.extend(
+                [
+                    "",
+                    "## Entity Refs",
+                    f"- project_id: `{entity_refs.get('project_id')}`",
+                    f"- scene_id: `{entity_refs.get('scene_id')}`",
+                    f"- asset_kind: `{entity_refs.get('asset_kind')}`",
+                    f"- asset_id: `{entity_refs.get('asset_id')}`",
+                ]
+            )
+        artifact_refs = list(payload.get("artifact_refs", []))
+        lines.append("")
+        lines.append("## Artifact Refs")
+        if artifact_refs:
+            for artifact_ref in artifact_refs:
+                lines.append(f"- `{artifact_ref}`")
+        else:
+            lines.append("- none")
+
+        progress_events = list(payload.get("progress_events", []))
+        lines.append("")
+        lines.append("## Progress")
+        if progress_events:
+            for event in progress_events:
+                lines.append(
+                    f"- {event.get('at')} | {event.get('step_id')} | "
+                    f"{event.get('state')} | {event.get('message')}"
+                )
+        else:
+            lines.append("- no progress events")
+
+        missing_sources = list(payload.get("missing_sources", []))
+        if missing_sources:
+            lines.append("")
+            lines.append("## Missing Sources")
+            for source_path in missing_sources:
+                lines.append(f"- `{source_path}`")
+        return "\n".join(lines) + "\n"
+
     def normalize_smoke_target(self, target_id: str | None) -> str:
         if target_id is None:
             return SMOKE_SUITE_TARGET_ID
@@ -905,60 +1390,69 @@ class ComfyUIRunner(Runner):
             )
         return process.pid
 
+    def iter_known_run_paths(self, run_id: str):
+        yield "smoke", self.build_smoke_paths(run_id)
+        yield "atomic", self.build_validation_paths(run_id, "atomic")
+        yield "composed", self.build_validation_paths(run_id, "composed")
+        yield "operate", self.build_validation_paths(run_id, "operate")
+
     def load_run_payload(self, run_id: str) -> dict[str, Any]:
-        paths = self.build_smoke_paths(run_id)
-        if paths["manifest_path"].exists():
-            state_store = JsonStateStore(paths["manifest_path"])
-            payload = state_store.read()
-            if (
-                payload["status"] in ACTIVE_RUN_STATUSES
-                and paths["summary_path"].exists()
-            ):
-                legacy_payload = self.build_legacy_summary_payload(run_id)
-                payload = state_store.update(
-                    lambda current: current.update(
-                        {
-                            "status": legacy_payload["status"],
-                            "message": legacy_payload["message"],
-                            "gate_pass": legacy_payload.get("gate_pass"),
-                            "artifact_refs": legacy_payload.get("artifact_refs", []),
-                            "case_results": legacy_payload.get("case_results", []),
-                            "summary_path": legacy_payload.get("summary_path"),
-                            "evidence_path": legacy_payload.get("evidence_path"),
-                            "completed_at": legacy_payload.get("completed_at")
-                            or utc_now(),
-                            "current_target_id": None,
-                            "current_prompt_id": None,
-                        }
+        for run_family, paths in self.iter_known_run_paths(run_id):
+            if paths["manifest_path"].exists():
+                state_store = JsonStateStore(paths["manifest_path"])
+                payload = state_store.read()
+                if (
+                    run_family == "smoke"
+                    and payload["status"] in ACTIVE_RUN_STATUSES
+                    and paths["summary_path"].exists()
+                ):
+                    legacy_payload = self.build_legacy_summary_payload(run_id)
+                    payload = state_store.update(
+                        lambda current: current.update(
+                            {
+                                "status": legacy_payload["status"],
+                                "message": legacy_payload["message"],
+                                "gate_pass": legacy_payload.get("gate_pass"),
+                                "artifact_refs": legacy_payload.get(
+                                    "artifact_refs", []
+                                ),
+                                "case_results": legacy_payload.get(
+                                    "case_results", []
+                                ),
+                                "summary_path": legacy_payload.get("summary_path"),
+                                "evidence_path": legacy_payload.get("evidence_path"),
+                                "completed_at": legacy_payload.get("completed_at")
+                                or utc_now(),
+                                "current_target_id": None,
+                                "current_prompt_id": None,
+                            }
+                        )
                     )
-                )
-            elif (
-                payload["status"] in ACTIVE_RUN_STATUSES
-                and not process_is_alive(payload.get("worker_pid"))
-                and not paths["summary_path"].exists()
-            ):
-                payload = state_store.update(
-                    lambda current: current.update(
-                        {
-                            "status": "fail_runtime",
-                            "message": (
-                                "El worker del runner termino sin escribir "
-                                "summary.json."
-                            ),
-                            "completed_at": utc_now(),
-                            "current_target_id": None,
-                            "current_prompt_id": None,
-                        }
+                elif (
+                    payload["status"] in ACTIVE_RUN_STATUSES
+                    and not process_is_alive(payload.get("worker_pid"))
+                    and not paths["summary_path"].exists()
+                ):
+                    payload = state_store.update(
+                        lambda current: current.update(
+                            {
+                                "status": "fail_runtime",
+                                "message": (
+                                    "El worker del runner termino sin escribir "
+                                    "summary.json."
+                                ),
+                                "completed_at": utc_now(),
+                                "current_target_id": None,
+                                "current_prompt_id": None,
+                            }
+                        )
                     )
-                )
-            return payload
+                return payload
 
-        if paths["summary_path"].exists():
-            return self.build_legacy_summary_payload(run_id)
+            if run_family == "smoke" and paths["summary_path"].exists():
+                return self.build_legacy_summary_payload(run_id)
 
-        raise FileNotFoundError(
-            f"No existe corrida conocida con run_id={run_id!r}."
-        )
+        raise FileNotFoundError(f"No existe corrida conocida con run_id={run_id!r}.")
 
     def build_legacy_summary_payload(self, run_id: str) -> dict[str, Any]:
         paths = self.build_smoke_paths(run_id)
@@ -1041,6 +1535,9 @@ class ComfyUIRunner(Runner):
                 "requested_at": payload.get("requested_at"),
                 "started_at": payload.get("started_at"),
                 "completed_at": payload.get("completed_at"),
+                "entity_refs": dict(payload.get("entity_refs", {})),
+                "progress_events": list(payload.get("progress_events", [])),
+                "missing_sources": list(payload.get("missing_sources", [])),
             },
         )
 
@@ -1063,5 +1560,8 @@ class ComfyUIRunner(Runner):
                 "requested_at": payload.get("requested_at"),
                 "started_at": payload.get("started_at"),
                 "completed_at": payload.get("completed_at"),
+                "entity_refs": dict(payload.get("entity_refs", {})),
+                "progress_events": list(payload.get("progress_events", [])),
+                "missing_sources": list(payload.get("missing_sources", [])),
             },
         )
