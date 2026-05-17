@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `75`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `20`
-- `pending`: `44`
+- `done`: `21`
+- `pending`: `43`
 
 ## Tasks
 
@@ -34,7 +34,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `12.1` Instalador de Kimodo e integracion al bootstrap | `12` Integracion de Kimodo para diseno de movimiento | `done` | [docs/devplan/tasks/12.1-kimodo-bootstrap-installation.md](docs/devplan/tasks/12.1-kimodo-bootstrap-installation.md) |
 | `13.1` Cleanup pre-rigging con Blender e Instant Meshes | `13` Cleanup 3D pre-rigging con Blender e Instant Meshes | `done` | [docs/devplan/tasks/13.1-blender-instant-meshes-pre-rigging-cleanup.md](docs/devplan/tasks/13.1-blender-instant-meshes-pre-rigging-cleanup.md) |
 | `13.2` Instalacion de dependencias de Phase 13 | `13` Cleanup 3D pre-rigging con Blender e Instant Meshes | `done` | [docs/devplan/tasks/13.2-phase13-dependency-installation.md](docs/devplan/tasks/13.2-phase13-dependency-installation.md) |
-| `13.3` Prueba end-to-end de Phase 13 | `13` Cleanup 3D pre-rigging con Blender e Instant Meshes | `pending` | [docs/devplan/tasks/13.3-phase13-e2e-proof.md](docs/devplan/tasks/13.3-phase13-e2e-proof.md) |
+| `13.3` Prueba end-to-end de Phase 13 | `13` Cleanup 3D pre-rigging con Blender e Instant Meshes | `done` | [docs/devplan/tasks/13.3-phase13-e2e-proof.md](docs/devplan/tasks/13.3-phase13-e2e-proof.md) |
 | `14.1` Plan de rigging humanoide Linux-first con Blender y Rigify | `14` Rigging humanoide automatizado con Blender y Rigify | `done` | [docs/devplan/tasks/14.1-blender-rigify-humanoid-rigging-plan.md](docs/devplan/tasks/14.1-blender-rigify-humanoid-rigging-plan.md) |
 | `14.1.1` Instalacion de dependencias de Phase 14 | `14` Rigging humanoide automatizado con Blender y Rigify | `done` | [docs/devplan/tasks/14.1.1-phase14-dependency-installation.md](docs/devplan/tasks/14.1.1-phase14-dependency-installation.md) |
 | `14.2` Prueba end-to-end de Phase 14 | `14` Rigging humanoide automatizado con Blender y Rigify | `pending` | [docs/devplan/tasks/14.2-phase14-e2e-proof.md](docs/devplan/tasks/14.2-phase14-e2e-proof.md) |

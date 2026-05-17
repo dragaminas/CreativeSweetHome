@@ -169,6 +169,38 @@ class BlenderRunnerTests(unittest.TestCase):
         self.assertEqual(result.status, "pass")
         self.assertIn(payload["remeshed_obj_path"], result.artifact_refs)
 
+    def test_pass_flow_artifact_refs_include_manifests_and_backend_logs(self) -> None:
+        source_model = self.root / "hero.obj"
+        source_model.write_text("o hero\n", encoding="utf-8")
+
+        response = self.runner.start_run(
+            self.make_request(
+                inputs={
+                    "source_model_path": str(source_model),
+                    "project_id": "demo",
+                    "entity_id": "hero",
+                }
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "pass")
+        self.assertIsNotNone(response.run_id)
+
+        payload = json.loads(Path(response.summary_path).read_text(encoding="utf-8"))  # type: ignore[arg-type]
+        artifact_refs = set(payload["artifact_refs"])
+
+        expected_refs = {
+            str(Path(response.manifest_path)),  # type: ignore[arg-type]
+            str(Path(response.summary_path)),  # type: ignore[arg-type]
+            str(Path(payload["cleanup_report_path"])),
+            str(Path(payload["command_logs"][0]["stdout_log_path"])),
+            str(Path(payload["command_logs"][0]["stderr_log_path"])),
+            str(Path(payload["command_logs"][1]["stdout_log_path"])),
+            str(Path(payload["command_logs"][1]["stderr_log_path"])),
+        }
+        self.assertTrue(expected_refs.issubset(artifact_refs))
+
     def test_instant_meshes_failure_soft_passes_with_fallback(self) -> None:
         source_model = self.root / "hero.obj"
         source_model.write_text("o hero\n", encoding="utf-8")
@@ -192,6 +224,40 @@ class BlenderRunnerTests(unittest.TestCase):
         self.assertTrue(Path(payload["cleaned_obj_path"]).is_file())
         self.assertFalse(Path(payload["remeshed_obj_path"]).exists())
         self.assertGreaterEqual(len(payload["warnings"]), 1)
+
+    def test_run_backend_command_captures_with_pipes_before_persisting_logs(self) -> None:
+        backend_script = self.root / "backend-sensitive-to-redirection.sh"
+        backend_script.write_text(
+            """#!/usr/bin/env bash
+set -euo pipefail
+
+fd1_target="$(readlink /proc/$$/fd/1 || true)"
+if [[ "$fd1_target" == /* && -f "$fd1_target" ]]; then
+  echo "stdout is redirected to a regular file" >&2
+  exit 120
+fi
+
+echo "backend-stdout"
+echo "backend-stderr" >&2
+""",
+            encoding="utf-8",
+        )
+        backend_script.chmod(0o755)
+
+        stdout_path = self.root / "sensitive.stdout.log"
+        stderr_path = self.root / "sensitive.stderr.log"
+        result = self.runner.run_backend_command(
+            stage="sensitive",
+            command=["bash", str(backend_script)],
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+        )
+
+        self.assertEqual(result["exit_code"], 0)
+        self.assertTrue(stdout_path.is_file())
+        self.assertTrue(stderr_path.is_file())
+        self.assertIn("backend-stdout", stdout_path.read_text(encoding="utf-8"))
+        self.assertIn("backend-stderr", stderr_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

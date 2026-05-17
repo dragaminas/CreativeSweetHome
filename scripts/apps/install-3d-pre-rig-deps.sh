@@ -200,6 +200,12 @@ ensure_instant_meshes_host_prereqs() {
   print_header "Instant Meshes Host Prereqs"
   kv "install_method" "$INSTANT_MESHES_INSTALL_METHOD"
 
+  if instant_meshes_bin="$(resolve_instant_meshes_bin)"; then
+    kv "instant_meshes_bin" "$instant_meshes_bin"
+    log "Instant Meshes ya esta disponible; se omite la instalacion de prerequisitos de build"
+    return 0
+  fi
+
   local package_manager
   package_manager="$(resolve_linux_package_manager)"
   if [[ "$package_manager" == "missing" ]]; then
@@ -336,6 +342,12 @@ kv "pre_rig_3d_deps_install" "$PRE_RIG_3D_DEPS_INSTALL"
 
 ensure_blender_installed
 ensure_instant_meshes_host_prereqs
-instant_meshes_ref_type="$(resolve_instant_meshes_ref_type)"
-sync_instant_meshes_checkout "$instant_meshes_ref_type"
-build_instant_meshes
+if instant_meshes_bin="$(resolve_instant_meshes_bin)"; then
+  print_header "Instant Meshes"
+  kv "instant_meshes_bin" "$instant_meshes_bin"
+  "$instant_meshes_bin" -h 2>&1 | sed -n '1,12p' || true
+else
+  instant_meshes_ref_type="$(resolve_instant_meshes_ref_type)"
+  sync_instant_meshes_checkout "$instant_meshes_ref_type"
+  build_instant_meshes
+fi

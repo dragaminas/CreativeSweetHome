@@ -579,14 +579,21 @@ class BlenderRunner(Runner):
         ensure_parent(stderr_path)
         started_at = utc_now()
         started_monotonic = time.monotonic()
-        with stdout_path.open("ab") as stdout_handle, stderr_path.open("ab") as stderr_handle:
-            process = subprocess.run(
-                command,
-                cwd=self.repo_root,
-                stdout=stdout_handle,
-                stderr=stderr_handle,
-                check=False,
-            )
+        process = subprocess.run(
+            command,
+            cwd=self.repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        stdout_bytes = process.stdout if isinstance(process.stdout, bytes) else b""
+        stderr_bytes = process.stderr if isinstance(process.stderr, bytes) else b""
+        with stdout_path.open("ab") as stdout_handle:
+            if stdout_bytes:
+                stdout_handle.write(stdout_bytes)
+        with stderr_path.open("ab") as stderr_handle:
+            if stderr_bytes:
+                stderr_handle.write(stderr_bytes)
         completed_at = utc_now()
         return {
             "stage": stage,
@@ -612,6 +619,16 @@ class BlenderRunner(Runner):
         final_payload["status"] = status
         final_payload["message"] = message
         final_payload["completed_at"] = utc_now()
+
+        # Materialize final manifests/report first so they can be included in
+        # artifact_refs consistently across pass and fallback outcomes.
+        write_json(paths.manifest_path, final_payload)
+        write_json(paths.summary_path, final_payload)
+        paths.report_path.write_text(
+            self.build_markdown_report(final_payload),
+            encoding="utf-8",
+        )
+
         final_payload["artifact_refs"] = self.collect_artifacts(paths)
         write_json(paths.manifest_path, final_payload)
         write_json(paths.summary_path, final_payload)
@@ -624,6 +641,8 @@ class BlenderRunner(Runner):
     def collect_artifacts(self, paths: CleanupPaths) -> list[str]:
         artifacts: list[str] = []
         for candidate in (
+            paths.manifest_path,
+            paths.summary_path,
             paths.source_copy_path.with_suffix(".glb"),
             paths.source_copy_path.with_suffix(".gltf"),
             paths.source_copy_path.with_suffix(".fbx"),
@@ -635,6 +654,10 @@ class BlenderRunner(Runner):
             paths.remeshed_obj_path,
             paths.working_blend_path,
             paths.blender_report_json_path,
+            paths.blender_stdout_log_path,
+            paths.blender_stderr_log_path,
+            paths.instant_stdout_log_path,
+            paths.instant_stderr_log_path,
             paths.report_path,
             paths.command_logs_path,
         ):

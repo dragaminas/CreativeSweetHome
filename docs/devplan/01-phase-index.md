@@ -334,7 +334,7 @@ variante del gist de `Aero-Ex` retenida solo como nota experimental.
 ## Phase 13: Cleanup 3D pre-rigging con Blender e Instant Meshes
 
 ### Status
-`active`
+`done`
 
 ### Purpose
 Preparar modelos humanoides 3D generados por AI para una etapa posterior de
@@ -384,9 +384,7 @@ queda fuera del alcance de esta fase.
   cleanup report simple; la aceptacion no requiere un rig perfecto
 
 ### Open Tasks
-- [`13.3`](tasks/13.3-phase13-e2e-proof.md): ejecutar la prueba end-to-end
-  real de la fase `13` con dependencias instaladas, input humanoide y
-  evidencia revisable
+- Ninguna
 
 ## Phase 14: Rigging humanoide automatizado con Blender y Rigify
 
