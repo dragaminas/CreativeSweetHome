@@ -696,7 +696,7 @@
           {/if}
         </div>
 
-        <div>
+        <div data-testid="asset-reference-checkpoints">
           <strong>Checkpoints:</strong>
           {#if referenceRun.progress_events.length === 0}
             <p class="muted">Sin checkpoints reportados por el runner.</p>

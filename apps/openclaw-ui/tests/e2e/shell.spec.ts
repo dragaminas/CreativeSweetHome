@@ -543,6 +543,10 @@ test.describe('phase19-asset-references', () => {
     await expect(page.getByTestId('asset-reference-artifacts')).toContainText(
       `${createAssetPayload.assetId}__ref__001.png`
     );
+    await expect(page.getByTestId('asset-reference-artifacts')).toContainText('preview image');
+    await expect(page.getByTestId('asset-reference-checkpoints')).toContainText(
+      'request-accepted'
+    );
     await expect(page.getByTestId('asset-reference-evidence-path')).toContainText(
       '/Validation/comfyui/operate/'
     );

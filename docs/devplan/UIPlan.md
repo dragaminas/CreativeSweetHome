@@ -180,6 +180,10 @@ de referencias encapsulado sobre `comfyui operate`:
 La prueba browser-backed `phase19-asset-references` valida la importacion real
 de una referencia desde la UI y confirma persistencia canonica + actualizacion
 de etapa `reference_image` para el asset.
+La task `19.2` queda cerrada en `pass` con evidencia real en
+`STUDIO_DIR/Scenes/.../references/published/` y
+`STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`, incluyendo checkpoints
+de progreso y preview de artefactos desde la superficie de producto.
 
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
