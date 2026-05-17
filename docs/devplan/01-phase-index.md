@@ -454,6 +454,9 @@ pueden servir solo como comparativa, no como ruta core.
   `blocked_*` para rigging humanoide automatico
 
 ### Open Tasks
+- [`14.1.2`](tasks/14.1.2-phase14-create-rig-runner-target.md): implementar
+  en backend el target canonico `create_rig_humanoid` con evidencia automatica
+  de poses/deformaciones bajo rutas canonicas
 - [`14.2`](tasks/14.2-phase14-e2e-proof.md): prueba e2e ejecutada en
   `blocked` por ausencia del target canonico `create_rig_humanoid`; mantener
   como gate de cierre hasta implementar runner + validacion automatica de poses
