@@ -36,10 +36,12 @@ Phase <N>: <nombre de fase>
 
 ## Scope Budget (Roo/Qwen)
 - Primary surface: `<backend_contract | ui_integration | dependency_install | e2e_proof | docs_only>`
-- Max changed files: `<3-7>`
+- Target changed files (soft cap): `<3-7>`
+- Hard cap (must stop and split): `<5-9>`
 - Max code areas: `<1-2 modulos>` (ejemplo: `runner + tests`, `ui route + adapter`)
 - Out-of-scope guardrail: `<que NO debe entrar en esta task>`
-- Split trigger: si para cerrar la task hay que exceder este budget, detenerse y crear task(s) hermana(s) antes de continuar.
+- Split trigger: si cerrar la task excede el `soft cap`, detener implementacion, abrir task hermana y replanificar antes de seguir.
+- Overflow protocol: si se alcanza el `hard cap`, no continuar codificando; registrar `blocked_scope_split_required`, dejar evidencia del gap y enlazar la task hermana en `docs/devplan/01-phase-index.md`.
 
 ## Files to Inspect First
 - `<ruta/de/archivo_1>`
@@ -57,6 +59,22 @@ Phase <N>: <nombre de fase>
 ## Upstream Validation Gate
 - <gate upstream requerido o "N/A" si no aplica por secuencia>
 - <artefacto validado que se reutiliza>
+
+## Source of Truth Matrix
+- Domain: `<task_status | runtime_state | navigation_projection | evidence_state>`
+- Authoritative Source: `<archivo/manifest que manda>`
+- Derived/Projection Artifacts: `<archivos derivados que no se editan a mano>`
+- Reconciliation Command: `<comando o test que valida sincronizacion>`
+- Write Rule: `primero se actualiza la fuente autoritativa; luego se regenera o reconcilia la proyeccion`
+
+## Implementation Contract (No-Drift)
+- Primary authority boundary: `<que SI controla esta task>`
+- Explicit non-authority boundary: `<que NO debe mutar esta task>`
+- Required inputs (existing artifacts): `<paths concretos obligatorios>`
+- Required outputs (exact paths): `<paths concretos esperados>`
+- Sequencing constraints: `<orden estricto de pasos>`
+- Failure policy: `<como reportar blocked/fail sin inventar rutas paralelas>`
+- Evidence policy: `<que evidencia exacta debe quedar y donde>`
 
 ## Do Not Create
 - <duplicaciones prohibidas y limites de alcance>

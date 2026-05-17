@@ -580,6 +580,9 @@ raiz de trabajo fuera de `STUDIO_DIR`.
 La estructura de escena debe ampliar los layouts ya canonicos como
 `Assets3D/` y `Exports/`, generando carpetas y manifiestos base de forma
 reproducible desde una accion de producto.
+La autoridad operativa queda en `STUDIO_DIR/Scenes/...`; `openclaw-projects`
+se conserva como proyeccion derivada reconciliada para navegacion y
+compatibilidad, no como segunda fuente manual.
 
 ### Stable Artifacts
 - [`UIPlan.md`](UIPlan.md)
@@ -633,12 +636,14 @@ mientras el pipeline de 7 etapas queda para desarrollo de tomas/escenas.
 - separacion explicita entre madurez de asset y progreso de tomas/escenas
 - feedback de readiness para pasos posteriores
 - API REST para CRUD de assets
+- sincronizacion del indice relacional `assets.json` con los catalogos
+  `character/object` para evitar doble verdad de relaciones
 
 ### Open Tasks
 - [`18.1`](tasks/18.1-ui-asset-catalog.md): implementar el catalogo de
   personajes y objetos dentro del shell web — `done`
 - [`18.2`](tasks/18.2-phase18-e2e-proof.md): probar una alta y actualizacion
-  real de assets con evidencia revisable
+  real de assets con evidencia revisable — `done`
 
 ## Phase 19: Referencias de assets con ComfyUI encapsulado
 

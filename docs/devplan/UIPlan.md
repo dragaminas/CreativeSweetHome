@@ -86,6 +86,10 @@ Reglas de arquitectura y logica:
 - los servicios de lectura para maqueta o implementacion real deben entrar por
   contratos de consulta explicitos (`ProjectNavigationQueryService`,
   `ProjectEditionQueryService`)
+- autoridad operativa unica para estado de escena/asset/shot/proyecto:
+  `STUDIO_DIR/Scenes/...`; cualquier `openclaw-projects/...` se trata como
+  proyeccion derivada reconciliada automaticamente y no se edita a mano como
+  origen primario
 
 Regla UX obligatoria:
 

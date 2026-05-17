@@ -72,6 +72,12 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
 - Cada tarea activa debe ser autocontenida para un chat nuevo de Codex.
 - Cada tarea activa debe declarar que infraestructura debe reutilizarse y que
   infraestructura no debe duplicarse.
+- Cada tarea activa debe declarar explicitamente su frontera de autoridad de
+  datos en una seccion `Source of Truth Matrix`.
+- En fases UI/data (`15-33`) la autoridad operativa de
+  escena/asset/shot/proyecto vive en `STUDIO_DIR/Scenes/...`; cualquier
+  `openclaw-projects/...` se considera proyeccion derivada reconcilable, no
+  origen paralelo editable a mano.
 - Cada tarea activa que introduzca o dependa de software externo debe declarar
   como se instala o provisiona desde el repo, o dejar el bloqueo documentado.
 - Cada task file nueva o modificada en un cambio de planning debe incluir una
@@ -93,9 +99,13 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   explicito de alcance (`Scope Budget`) para limitar desviaciones de ejecucion
   con agentes locales.
 - Ese budget debe declarar al menos: superficie principal, maximo de archivos,
-  maximo de areas de codigo y trigger de split obligatorio.
+  maximo de areas de codigo, `soft cap`, `hard cap`, trigger de split y
+  protocolo de overflow obligatorio.
 - Las tareas nuevas o modificadas con estado `pending` deben incluir
   `Microtask Breakdown` con slices verticales pequenos y verificables.
+- Las tareas nuevas o modificadas con estado `pending` deben incluir
+  `Implementation Contract (No-Drift)` con fronteras explicitas,
+  entradas/salidas, secuenciacion y politica de evidencia.
 - Cada microtarea debe declarar, en la misma linea, rutas objetivo (`files:`) y
   comando de verificacion (`verify:`).
 - Si una task `pending` requiere mezclar varias superficies principales
@@ -117,6 +127,7 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   - `## Minimal Context`
   - `## Files to Inspect First`
   - `## Existing Infrastructure to Reuse`
+  - `## Source of Truth Matrix`
   - `## Do Not Create`
   - `## Required Change`
   - `## Deliverables`
@@ -126,7 +137,12 @@ Estas reglas son estables y se aplican a futuras tareas de Codex en este repo.
   - `## Acceptance Criteria`
 - Para task files `pending` nuevas o modificadas tambien son obligatorias:
   - `## Scope Budget`
+  - `## Implementation Contract (No-Drift)`
   - `## Microtask Breakdown`
+- `Scope Budget` en tasks `pending` debe incluir literalmente:
+  - `Target changed files (soft cap)`
+  - `Hard cap (must stop and split)`
+  - `Overflow protocol`
 - Cada task file nueva o modificada debe incluir una seccion explicita de
   dependencia (`Dependency Provisioning`, `Dependency Path` o
   `Planned Dependency Path`) siguiendo las reglas de dependencia ya definidas
