@@ -389,7 +389,7 @@ queda fuera del alcance de esta fase.
 ## Phase 14: Rigging humanoide automatizado con Blender y Rigify
 
 ### Status
-`active`
+`done`
 
 ### Purpose
 Definir una ruta local, gratuita y Linux-first para que un usuario principiante
@@ -454,9 +454,7 @@ pueden servir solo como comparativa, no como ruta core.
   `blocked_*` para rigging humanoide automatico
 
 ### Open Tasks
-- [`14.2`](tasks/14.2-phase14-e2e-proof.md): prueba e2e ejecutada en
-  `blocked` hasta cerrar la corrida completa de fase con input preparado real y
-  evidencia e2e revisable de rigging/poses como gate de cierre
+- Ninguna
 
 ## Phase 15: Producto UI web con SvelteKit y workspaces embebidos
 
