@@ -148,6 +148,8 @@ Ejemplos:
 - objetivos de producto `operate` como:
   - `asset-reference-import`
   - `asset-reference-generate`
+  - `asset-3d-import`
+  - `asset-3d-generate`
 
 ## `start_run`
 

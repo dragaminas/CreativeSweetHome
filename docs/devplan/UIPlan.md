@@ -185,6 +185,18 @@ La task `19.2` queda cerrada en `pass` con evidencia real en
 `STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`, incluyendo checkpoints
 de progreso y preview de artefactos desde la superficie de producto.
 
+Para `UX-05` (phase `20`) el backend canonico ya expone dos targets adicionales
+en `comfyui operate` para `asset -> 3D candidate`:
+
+- `asset-3d-import`: importa un modelo 3D existente y publica candidato canonico
+  en `STUDIO_DIR/Assets3D/<project>/<asset>/comfyui/output/` con handoff
+  preparado en `.../blender/imports/`
+- `asset-3d-generate`: registra solicitud estructurada de modelado 3D en
+  `.../comfyui/requests/<run_id>__request.json` y deja trazado el output
+  esperado del candidato para orquestacion posterior
+- feedback de run: estado legible, checkpoints y evidencia de la operacion en
+  `STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

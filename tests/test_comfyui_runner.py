@@ -106,12 +106,14 @@ class ComfyUIRunnerTests(unittest.TestCase):
         self.assertEqual(response.operation_kind, "validate_atomic")
         self.assertEqual(response.target_id, "AT-IMG-02-01")
 
-    def test_operate_targets_include_asset_reference_import_and_generate(self) -> None:
+    def test_operate_targets_include_asset_reference_and_asset_3d_flows(self) -> None:
         targets = self.runner.list_targets("operate")
         target_ids = {target.target_id for target in targets}
 
         self.assertIn("asset-reference-import", target_ids)
         self.assertIn("asset-reference-generate", target_ids)
+        self.assertIn("asset-3d-import", target_ids)
+        self.assertIn("asset-3d-generate", target_ids)
 
     def test_operate_asset_reference_import_publishes_references(self) -> None:
         source_a = self.root / "ref-a.png"
@@ -209,6 +211,101 @@ class ComfyUIRunnerTests(unittest.TestCase):
         )
         self.assertEqual(summary_payload["status"], "soft_pass_with_fallback")
         self.assertEqual(summary_payload["target_id"], "asset-reference-generate")
+
+    def test_operate_asset_3d_import_publishes_candidate_under_assets3d(self) -> None:
+        source_model = self.root / "asset-source.glb"
+        source_model.write_bytes(b"glb")
+
+        response = self.runner.start_run(
+            StartRunRequest(
+                runner_id="comfyui",
+                operation_kind="operate",
+                target_id="asset-3d-import",
+                requested_by="tests",
+                channel="tests",
+                run_id="operate-asset3d-import-001",
+                inputs={
+                    "project_id": "pilot-project",
+                    "scene_id": "sc001",
+                    "asset_kind": "object",
+                    "asset_id": "obj-001",
+                    "source_model_path": str(source_model),
+                },
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "pass")
+        self.assertIsNotNone(response.summary_path)
+        summary_payload = json.loads(
+            Path(response.summary_path).read_text(encoding="utf-8")  # type: ignore[arg-type]
+        )
+        self.assertEqual(summary_payload["target_id"], "asset-3d-import")
+        self.assertEqual(summary_payload["status"], "pass")
+
+        expected_candidate_path = (
+            self.studio_dir
+            / "Assets3D"
+            / "pilot-project"
+            / "obj-001"
+            / "comfyui"
+            / "output"
+            / "obj-001__mesh_candidate__v001.glb"
+        )
+        expected_blender_import_path = (
+            self.studio_dir
+            / "Assets3D"
+            / "pilot-project"
+            / "obj-001"
+            / "blender"
+            / "imports"
+            / "obj-001__mesh_candidate__v001.glb"
+        )
+        self.assertTrue(expected_candidate_path.is_file())
+        self.assertTrue(expected_blender_import_path.is_file())
+        self.assertIn(str(expected_candidate_path), response.artifact_refs)
+        self.assertIn(str(expected_blender_import_path), response.artifact_refs)
+
+    def test_operate_asset_3d_generate_records_request_under_assets3d(self) -> None:
+        response = self.runner.start_run(
+            StartRunRequest(
+                runner_id="comfyui",
+                operation_kind="operate",
+                target_id="asset-3d-generate",
+                requested_by="tests",
+                channel="tests",
+                run_id="operate-asset3d-generate-001",
+                inputs={
+                    "project_id": "pilot-project",
+                    "scene_id": "sc001",
+                    "asset_kind": "character",
+                    "asset_id": "chr-001",
+                    "brief_text": "personaje estilizado en pose neutral",
+                    "preset_id": "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1",
+                },
+            )
+        )
+
+        self.assertTrue(response.accepted)
+        self.assertEqual(response.status, "soft_pass_with_fallback")
+        self.assertIsNotNone(response.summary_path)
+        summary_payload = json.loads(
+            Path(response.summary_path).read_text(encoding="utf-8")  # type: ignore[arg-type]
+        )
+        self.assertEqual(summary_payload["target_id"], "asset-3d-generate")
+        self.assertEqual(summary_payload["status"], "soft_pass_with_fallback")
+
+        request_path = (
+            self.studio_dir
+            / "Assets3D"
+            / "pilot-project"
+            / "chr-001"
+            / "comfyui"
+            / "requests"
+            / "operate-asset3d-generate-001__request.json"
+        )
+        self.assertTrue(request_path.is_file())
+        self.assertIn(str(request_path), response.artifact_refs)
 
 
 if __name__ == "__main__":

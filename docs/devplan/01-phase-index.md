@@ -703,7 +703,7 @@ crear otro pipeline 3D paralelo. Los resultados deben publicarse bajo
 
 ### Open Tasks
 - [`20.0`](tasks/20.0-backend-asset-3d-operation.md): cerrar la operacion
-  backend canonica `asset -> 3D` antes de la e2e UI
+  backend canonica `asset -> 3D` antes de la e2e UI — `done`
 - [`20.1`](tasks/20.1-ui-asset-3d-import-or-modeling.md): implementar la
   integracion UI con la ruta 3D vigente del repo
 - [`20.2`](tasks/20.2-phase20-e2e-proof.md): probar un asset real hasta el

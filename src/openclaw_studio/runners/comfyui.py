@@ -48,6 +48,14 @@ SMOKE_TARGET_ALIASES = {"", "all", "smoke", "smoke-suite", "suite"}
 ATOMIC_TARGET_ALIASES = {"", "all", "atomic", "atomic-suite", "suite"}
 COMPOSED_TARGET_ALIASES = {"", "all", "composed", "composed-suite", "suite"}
 OPERATE_KIND = "operate"
+SUPPORTED_3D_SOURCE_EXTENSIONS = {
+    ".fbx",
+    ".glb",
+    ".gltf",
+    ".obj",
+    ".ply",
+    ".stl",
+}
 
 
 def utc_now() -> str:
@@ -980,8 +988,17 @@ class ComfyUIRunner(Runner):
                 ).strip()
                 if not brief_text:
                     return (
-                        "asset-reference-generate requiere brief_text "
+                        f"{target_id} requiere brief_text "
                         "estructurado en inputs."
+                    )
+                continue
+
+            if required_key == "source_model_path":
+                source_model_path = str(inputs.get("source_model_path") or "").strip()
+                if not source_model_path:
+                    return (
+                        f"{target_id} requiere source_model_path "
+                        "con una ruta de modelo 3D existente."
                     )
                 continue
 
@@ -1008,6 +1025,14 @@ class ComfyUIRunner(Runner):
             / kind_dir
             / entity_refs["asset_id"]
             / "references"
+        )
+
+    def resolve_asset_3d_root(self, entity_refs: dict[str, str]) -> Path:
+        return (
+            self.studio_dir
+            / "Assets3D"
+            / entity_refs["project_id"]
+            / entity_refs["asset_id"]
         )
 
     def resolve_reference_source_path(self, raw_path: str) -> Path:
@@ -1077,6 +1102,10 @@ class ComfyUIRunner(Runner):
             return self.execute_asset_reference_import(payload, request.inputs)
         if target_id == "asset-reference-generate":
             return self.execute_asset_reference_generate(payload, request.inputs)
+        if target_id == "asset-3d-import":
+            return self.execute_asset_3d_import(payload, request.inputs)
+        if target_id == "asset-3d-generate":
+            return self.execute_asset_3d_generate(payload, request.inputs)
 
         payload["status"] = "fail_compile"
         payload["message"] = f"target_id no implementado: {target_id!r}."
@@ -1208,6 +1237,168 @@ class ComfyUIRunner(Runner):
             "encapsulada y pendiente de orquestacion de runtime."
         )
         payload["generation_request_path"] = str(request_path)
+        payload["current_target_id"] = None
+        payload["completed_at"] = utc_now()
+        payload["updated_at"] = utc_now()
+        append_progress_event(
+            payload,
+            step_id="close-run",
+            state="done",
+            message=payload["message"],
+        )
+        return payload
+
+    def execute_asset_3d_import(
+        self,
+        payload: dict[str, Any],
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        assets3d_root = self.resolve_asset_3d_root(payload["entity_refs"])
+        input_dir = assets3d_root / "input"
+        comfyui_output_dir = assets3d_root / "comfyui" / "output"
+        blender_imports_dir = assets3d_root / "blender" / "imports"
+        input_dir.mkdir(parents=True, exist_ok=True)
+        comfyui_output_dir.mkdir(parents=True, exist_ok=True)
+        blender_imports_dir.mkdir(parents=True, exist_ok=True)
+        append_progress_event(
+            payload,
+            step_id="prepare-assets3d-paths",
+            state="done",
+            message=f"Layout 3D canonico listo en {assets3d_root}.",
+        )
+
+        source_model_raw = str(inputs.get("source_model_path") or "").strip()
+        source_model_path = self.resolve_reference_source_path(source_model_raw)
+        if not source_model_path.exists() or not source_model_path.is_file():
+            payload["status"] = "blocked_missing_asset"
+            payload["message"] = (
+                "No se pudo importar el candidato 3D: source_model_path no existe "
+                "o no es un archivo."
+            )
+            payload["artifact_refs"] = []
+            payload["missing_sources"] = [str(source_model_path)]
+            payload["current_target_id"] = None
+            payload["completed_at"] = utc_now()
+            payload["updated_at"] = utc_now()
+            append_progress_event(
+                payload,
+                step_id="import-source-model",
+                state="blocked",
+                message=payload["message"],
+            )
+            return payload
+
+        extension = source_model_path.suffix.lower()
+        if extension not in SUPPORTED_3D_SOURCE_EXTENSIONS:
+            payload["status"] = "fail_compile"
+            payload["message"] = (
+                "Extension no soportada para asset-3d-import: "
+                f"{extension or '<none>'!r}."
+            )
+            payload["artifact_refs"] = []
+            payload["current_target_id"] = None
+            payload["completed_at"] = utc_now()
+            payload["updated_at"] = utc_now()
+            append_progress_event(
+                payload,
+                step_id="import-source-model",
+                state="failed",
+                message=payload["message"],
+            )
+            return payload
+
+        asset_id = payload["entity_refs"]["asset_id"]
+        source_copy_path = input_dir / f"{asset_id}__source__001{extension}"
+        candidate_output_path = comfyui_output_dir / f"{asset_id}__mesh_candidate__v001{extension}"
+        blender_import_path = blender_imports_dir / f"{asset_id}__mesh_candidate__v001{extension}"
+        shutil.copy2(source_model_path, source_copy_path)
+        shutil.copy2(source_model_path, candidate_output_path)
+        shutil.copy2(source_model_path, blender_import_path)
+
+        payload["status"] = "pass"
+        payload["message"] = (
+            "Candidato 3D importado y publicado en Assets3D para handoff a Blender."
+        )
+        payload["assets3d_root"] = str(assets3d_root)
+        payload["source_model_path"] = str(source_model_path)
+        payload["source_copy_path"] = str(source_copy_path)
+        payload["candidate_output_path"] = str(candidate_output_path)
+        payload["blender_import_path"] = str(blender_import_path)
+        payload["artifact_refs"] = [
+            str(source_copy_path),
+            str(candidate_output_path),
+            str(blender_import_path),
+        ]
+        append_progress_event(
+            payload,
+            step_id="publish-asset-3d-candidate",
+            state="done",
+            message=payload["message"],
+        )
+        payload["current_target_id"] = None
+        payload["completed_at"] = utc_now()
+        payload["updated_at"] = utc_now()
+        return payload
+
+    def execute_asset_3d_generate(
+        self,
+        payload: dict[str, Any],
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        assets3d_root = self.resolve_asset_3d_root(payload["entity_refs"])
+        comfyui_requests_dir = assets3d_root / "comfyui" / "requests"
+        comfyui_output_dir = assets3d_root / "comfyui" / "output"
+        blender_imports_dir = assets3d_root / "blender" / "imports"
+        comfyui_requests_dir.mkdir(parents=True, exist_ok=True)
+        comfyui_output_dir.mkdir(parents=True, exist_ok=True)
+        blender_imports_dir.mkdir(parents=True, exist_ok=True)
+
+        asset_id = payload["entity_refs"]["asset_id"]
+        candidate_output_path = comfyui_output_dir / f"{asset_id}__mesh_candidate__v001.glb"
+        blender_import_path = blender_imports_dir / f"{asset_id}__mesh_candidate__v001.glb"
+        request_path = comfyui_requests_dir / f"{payload['run_id']}__request.json"
+
+        brief_text = str(inputs.get("brief_text") or inputs.get("prompt") or "").strip()
+        preset_id = str(
+            inputs.get("preset_id") or "uc-3d-02-image-to-asset-trellis2-gguf-q4-v1"
+        ).strip()
+        request_payload = {
+            "run_id": payload["run_id"],
+            "target_id": payload["target_id"],
+            "project_id": payload["entity_refs"]["project_id"],
+            "scene_id": payload["entity_refs"]["scene_id"],
+            "asset_kind": payload["entity_refs"]["asset_kind"],
+            "asset_id": asset_id,
+            "brief_text": brief_text,
+            "preset_id": preset_id,
+            "reference_source_paths": parse_string_list(
+                inputs.get("reference_source_paths")
+            ),
+            "candidate_output_path": str(candidate_output_path),
+            "blender_import_path": str(blender_import_path),
+            "requested_at": payload["requested_at"],
+            "requested_by": payload["requested_by"],
+            "channel": payload["channel"],
+            "notes": str(inputs.get("notes") or "").strip(),
+        }
+        write_json(request_path, request_payload)
+        append_progress_event(
+            payload,
+            step_id="persist-asset-3d-request",
+            state="done",
+            message=f"Solicitud de modelado 3D registrada en {request_path}.",
+        )
+
+        payload["status"] = "soft_pass_with_fallback"
+        payload["message"] = (
+            "Solicitud de modelado 3D registrada. La ejecucion de Trellis2 en ComfyUI "
+            "queda pendiente de orquestacion de runtime."
+        )
+        payload["assets3d_root"] = str(assets3d_root)
+        payload["generation_request_path"] = str(request_path)
+        payload["candidate_output_path"] = str(candidate_output_path)
+        payload["blender_import_path"] = str(blender_import_path)
+        payload["artifact_refs"] = [str(request_path)]
         payload["current_target_id"] = None
         payload["completed_at"] = utc_now()
         payload["updated_at"] = utc_now()

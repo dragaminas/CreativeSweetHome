@@ -58,6 +58,38 @@ COMFYUI_OPERATE_TARGET_SPECS = (
             "ComfyUI sin exponer parametros de grafo en la capa de producto."
         ),
     ),
+    ComfyUIOperateTargetSpec(
+        target_id="asset-3d-import",
+        display_label="Importar candidato 3D de asset",
+        required_input_keys=(
+            "project_id",
+            "scene_id",
+            "asset_kind",
+            "asset_id",
+            "source_model_path",
+        ),
+        optional_input_keys=("notes", "source"),
+        notes=(
+            "Publica un candidato 3D canonico bajo Assets3D y deja handoff "
+            "listo para cleanup/rigging sin exponer detalles internos del runtime."
+        ),
+    ),
+    ComfyUIOperateTargetSpec(
+        target_id="asset-3d-generate",
+        display_label="Orquestar modelado 3D de asset",
+        required_input_keys=(
+            "project_id",
+            "scene_id",
+            "asset_kind",
+            "asset_id",
+            "brief_text",
+        ),
+        optional_input_keys=("preset_id", "reference_source_paths", "notes"),
+        notes=(
+            "Registra una solicitud estructurada para Trellis2 GGUF y publica "
+            "rutas canonicas de candidato 3D bajo Assets3D."
+        ),
+    ),
 )
 
 

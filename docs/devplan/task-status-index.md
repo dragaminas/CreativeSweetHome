@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `76`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `23`
-- `pending`: `42`
+- `done`: `24`
+- `pending`: `41`
 
 ## Tasks
 
@@ -52,7 +52,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `19.0` Backend canonico de referencias de assets en ComfyUI | `19` Referencias de assets con ComfyUI encapsulado | `done` | [docs/devplan/tasks/19.0-backend-comfyui-asset-reference-operation.md](docs/devplan/tasks/19.0-backend-comfyui-asset-reference-operation.md) |
 | `19.1` Referencias de assets en UI con ComfyUI encapsulado | `19` Referencias de assets con ComfyUI encapsulado | `done` | [docs/devplan/tasks/19.1-ui-asset-reference-images.md](docs/devplan/tasks/19.1-ui-asset-reference-images.md) |
 | `19.2` Prueba end-to-end de Phase 19 | `19` Referencias de assets con ComfyUI encapsulado | `done` | [docs/devplan/tasks/19.2-phase19-e2e-proof.md](docs/devplan/tasks/19.2-phase19-e2e-proof.md) |
-| `20.0` Backend canonico de asset a 3D | `20` Importacion o modelado 3D de assets en UI | `pending` | [docs/devplan/tasks/20.0-backend-asset-3d-operation.md](docs/devplan/tasks/20.0-backend-asset-3d-operation.md) |
+| `20.0` Backend canonico de asset a 3D | `20` Importacion o modelado 3D de assets en UI | `done` | [docs/devplan/tasks/20.0-backend-asset-3d-operation.md](docs/devplan/tasks/20.0-backend-asset-3d-operation.md) |
 | `20.1` Importacion o modelado 3D de assets en UI | `20` Importacion o modelado 3D de assets en UI | `pending` | [docs/devplan/tasks/20.1-ui-asset-3d-import-or-modeling.md](docs/devplan/tasks/20.1-ui-asset-3d-import-or-modeling.md) |
 | `20.2` Prueba end-to-end de Phase 20 | `20` Importacion o modelado 3D de assets en UI | `pending` | [docs/devplan/tasks/20.2-phase20-e2e-proof.md](docs/devplan/tasks/20.2-phase20-e2e-proof.md) |
 | `21.1` Integracion UI del cleanup de meshes | `21` Cleanup automatizado de meshes en UI | `pending` | [docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md](docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md) |
