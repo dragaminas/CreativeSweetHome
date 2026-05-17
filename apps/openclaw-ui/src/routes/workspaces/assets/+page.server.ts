@@ -20,8 +20,47 @@ function resolveDefaultScene(
   return { projectId, sceneId };
 }
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load: PageServerLoad = async ({ parent, url }) => {
   const parentData = await parent();
+
+  // Prefer explicit query params over resolved defaults
+  const explicitProjectId = url.searchParams.get('projectId');
+  const explicitSceneId = url.searchParams.get('sceneId');
+
+  if (explicitProjectId && explicitSceneId) {
+    const { projectId, sceneId } = { projectId: explicitProjectId, sceneId: explicitSceneId };
+
+    let assetCatalog: ListAssetsResult = {
+      status: 'empty',
+      message: 'No catalog found.',
+      projectId,
+      sceneId,
+      total: 0,
+      assets: []
+    };
+
+    let assetReadiness = null;
+
+    try {
+      assetCatalog = await listAssets({ projectId, sceneId });
+    } catch {
+      // Silently fail - catalog will show empty
+    }
+
+    try {
+      assetReadiness = await getAssetReadiness(projectId, sceneId);
+    } catch {
+      assetReadiness = null;
+    }
+
+    return {
+      projectId,
+      sceneId,
+      assetCatalog,
+      assetReadiness
+    };
+  }
+
   const { projectId, sceneId } = resolveDefaultScene(parentData.projectNavigation);
 
   let assetCatalog: ListAssetsResult = {

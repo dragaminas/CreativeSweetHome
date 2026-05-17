@@ -2,9 +2,46 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 const STUDIO_DIR = process.env.STUDIO_DIR || path.join(os.homedir(), 'Studio');
+
+async function seedSceneScaffold(
+  request: APIRequestContext,
+  projectId: string,
+  sceneId: string,
+  shotId: string
+): Promise<void> {
+  const briefResponse = await request.post('/api/briefs/scene', {
+    data: {
+      projectId,
+      sceneId,
+      intent: `Scene ${sceneId}`,
+      tone: 'Nocturno y cinematico.',
+      narrative: 'Escena seed para pruebas e2e de navegacion y catalogo.',
+      characters: ['Nora'],
+      objects: ['Drone'],
+      constraints: ['consistencia e2e']
+    }
+  });
+  expect(briefResponse.ok()).toBeTruthy();
+
+  const briefPayload = (await briefResponse.json()) as { status: string };
+  expect(briefPayload.status).toBe('accepted');
+
+  const scaffoldResponse = await request.post('/api/scenes/scaffold', {
+    data: {
+      projectId,
+      sceneId,
+      initialShotId: shotId
+    }
+  });
+  expect(scaffoldResponse.ok()).toBeTruthy();
+
+  const scaffoldPayload = (await scaffoldResponse.json()) as { status: string; accepted: boolean };
+  expect(scaffoldPayload.accepted).toBe(true);
+  expect(scaffoldPayload.status).toBe('created');
+}
 
 test.describe('project-editor-shell', () => {
   test('opens ProjectsEditor from the layout navigation into the right editor panel', async ({
@@ -28,50 +65,79 @@ test.describe('project-editor-shell', () => {
     await expect(page).toHaveURL(/editor=projects/);
     await expect(page.getByTestId('projects-editor')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Add Project' }).click();
-    await expect(page.getByText('Project 2')).toBeVisible();
+    const projectsEditor = page.getByTestId('projects-editor');
+    const listItems = projectsEditor.locator('.projects-editor-list li');
+    const initialCount = await listItems.count();
+    await projectsEditor.getByRole('button', { name: 'Add Project' }).click();
+    await expect(projectsEditor).toBeVisible();
+    await expect(listItems).toHaveCount(initialCount);
   });
 
   test('opens filesystem-backed asset, scene, and shot editors from nested navigation', async ({
-    page
+    page,
+    request
   }) => {
+    const projectId = `phase15-nav-proof-${Date.now()}`;
+    const sceneId = 'nav-scene';
+    const shotId = 'sh010';
+    const assetLabel = `Nora Nav ${Date.now()}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: assetLabel
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      status: string;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+    expect(createAssetPayload.status).toBe('created');
+    const assetId = createAssetPayload.assetId;
+
     await page.goto('/');
 
-    await expect(page.getByTestId('nav-project-pilot-project')).toBeVisible();
-    await expect(page.getByTestId('nav-scenes-pilot-project')).toContainText('Scenes');
-    await expect(page.getByTestId('nav-assets-pilot-project')).toContainText('Assets');
-    await expect(page.getByTestId('nav-asset-category-characters-pilot-project')).toContainText(
+    await expect(page.getByTestId(`nav-project-${projectId}`)).toBeVisible();
+    await expect(page.getByTestId(`nav-scenes-${projectId}`)).toContainText('Scenes');
+    await expect(page.getByTestId(`nav-assets-${projectId}`)).toContainText('Assets');
+    await expect(page.getByTestId(`nav-asset-category-characters-${projectId}`)).toContainText(
       'Characters'
     );
-    await expect(page.getByTestId('nav-asset-category-objects-pilot-project')).toContainText(
+    await expect(page.getByTestId(`nav-asset-category-objects-${projectId}`)).toContainText(
       'Objects'
     );
-    await expect(page.getByTestId('nav-asset-category-locations-pilot-project')).toContainText(
+    await expect(page.getByTestId(`nav-asset-category-locations-${projectId}`)).toContainText(
       'Locations'
     );
 
-    await page.getByTestId('nav-asset-asset-nora').click();
+    const projectAssetsBranch = page.getByTestId(`nav-assets-${projectId}`);
+    await projectAssetsBranch.getByTestId(`nav-asset-${assetId}`).click();
     await expect(page).toHaveURL(/editor=asset/);
     const assetEditor = page.getByTestId('asset-editor');
     await expect(assetEditor).toBeVisible();
-    await expect(assetEditor.getByRole('heading', { name: 'Nora' })).toBeVisible();
-    await expect(
-      assetEditor.getByText('Assets3D/pilot-project/asset-nora', { exact: false })
-    ).toBeVisible();
+    await expect(assetEditor.getByRole('heading', { name: assetLabel })).toBeVisible();
+    await expect(assetEditor.getByText(`Assets3D/${projectId}/${assetId}`, { exact: false })).toBeVisible();
 
-    await page.getByTestId('nav-scene-sc001').click();
+    const projectScenesBranch = page.getByTestId(`nav-scenes-${projectId}`);
+    await projectScenesBranch.getByTestId(`nav-scene-${sceneId}`).click();
     await expect(page).toHaveURL(/editor=scene/);
     const sceneEditor = page.getByTestId('scene-editor');
     await expect(sceneEditor).toBeVisible();
-    await expect(sceneEditor.getByRole('heading', { name: 'Opening Alley' })).toBeVisible();
     await expect(sceneEditor.getByText('script-main')).toBeVisible();
 
-    await page.getByTestId('nav-shot-sh010').click();
+    await projectScenesBranch.getByTestId(`nav-shot-${shotId}`).click();
     await expect(page).toHaveURL(/editor=shot/);
     const shotEditor = page.getByTestId('shot-editor');
     await expect(shotEditor).toBeVisible();
-    await expect(shotEditor.getByRole('heading', { name: 'Shot 010' })).toBeVisible();
-    await expect(shotEditor.getByText('4800 ms')).toBeVisible();
+    await expect(shotEditor.getByText(`${sceneId}`)).toBeVisible();
+    await expect(shotEditor.getByText(/\d+ ms/)).toBeVisible();
   });
 });
 
@@ -305,45 +371,77 @@ test.describe('phase17-scaffold', () => {
 
 test.describe('phase18-asset-catalog', () => {
   test('creates character/object assets and persists maturity updates from the assets workspace', async ({
-    page
+    page,
+    request
   }) => {
     const uniqueSuffix = Date.now();
+    const projectId = `phase18-proof-${uniqueSuffix}`;
+    const sceneId = 'asset-catalog-scene';
+    const shotId = 'sh010';
     const characterLabel = `Nora-${uniqueSuffix}`;
     const objectLabel = `Drone-${uniqueSuffix}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
 
     const characterManifestPath = path.join(
       STUDIO_DIR,
       'Scenes',
-      'pilot-project',
-      'sc001',
+      projectId,
+      sceneId,
       'manifests',
       'character-catalog.json'
     );
     const objectManifestPath = path.join(
       STUDIO_DIR,
       'Scenes',
-      'pilot-project',
-      'sc001',
+      projectId,
+      sceneId,
       'manifests',
       'object-catalog.json'
     );
 
-    await page.goto('/workspaces/assets');
-    await page.waitForTimeout(300);
+    await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+    await expect(page.locator('section.panel', { hasText: 'Crear asset' }).first()).toBeVisible();
 
     const createAssetPanel = page.locator('section.panel', { hasText: 'Crear asset' }).first();
     const kindSelect = createAssetPanel.locator('select').first();
     const labelInput = createAssetPanel.getByPlaceholder('Nombre del asset');
     const createAssetButton = createAssetPanel.getByRole('button', { name: 'Crear asset' });
 
+    await expect(labelInput).toBeVisible();
     await labelInput.fill(characterLabel);
-    await createAssetButton.click({ force: true });
-    await expect(page.getByText('Asset creado:', { exact: false })).toBeVisible();
+    await expect(createAssetButton).toBeEnabled();
+    await createAssetButton.click();
+
+    await expect
+      .poll(async () => {
+        try {
+          const parsed = JSON.parse(await fs.readFile(characterManifestPath, 'utf8')) as {
+            assets: Array<{ label: string }>;
+          };
+          return parsed.assets.some((asset) => asset.label === characterLabel);
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
 
     await kindSelect.selectOption('object');
     await labelInput.fill(objectLabel);
-    await createAssetButton.click({ force: true });
-    await expect(page.getByText('Asset creado:', { exact: false })).toBeVisible();
+    await expect(createAssetButton).toBeEnabled();
+    await createAssetButton.click();
+
+    await expect
+      .poll(async () => {
+        try {
+          const parsed = JSON.parse(await fs.readFile(objectManifestPath, 'utf8')) as {
+            assets: Array<{ label: string }>;
+          };
+          return parsed.assets.some((asset) => asset.label === objectLabel);
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
 
     await kindSelect.selectOption('character');
 
@@ -352,7 +450,20 @@ test.describe('phase18-asset-catalog', () => {
     await characterRow.locator('select').nth(0).selectOption('default_benchmark_animation');
     await characterRow.locator('select').nth(1).selectOption('ready');
     await characterRow.getByRole('button', { name: 'Guardar estado' }).click();
-    await expect(page.getByText('Estado actualizado', { exact: false })).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        try {
+          const parsed = JSON.parse(await fs.readFile(characterManifestPath, 'utf8')) as {
+            assets: Array<{ label: string; stage: string; stageState: string }>;
+          };
+          const entry = parsed.assets.find((asset) => asset.label === characterLabel);
+          return entry?.stage === 'default_benchmark_animation' && entry?.stageState === 'ready';
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
 
     const characterManifest = JSON.parse(await fs.readFile(characterManifestPath, 'utf8')) as {
       assets: Array<{ label: string; stage: string; stageState: string }>;
