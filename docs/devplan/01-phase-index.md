@@ -648,7 +648,7 @@ mientras el pipeline de 7 etapas queda para desarrollo de tomas/escenas.
 ## Phase 19: Referencias de assets con ComfyUI encapsulado
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Exponer en la UI la generacion o importacion de referencias de assets sin
@@ -657,7 +657,9 @@ mostrar el canvas ni la UI general de `ComfyUI`.
 ### Current Decision
 La UI debe exponer presets, inputs simplificados, progreso, previews
 intermedios, artefactos finales y errores legibles, mientras `ComfyUI` opera
-como engine detras del contrato canonico.
+como engine detras del contrato canonico. El backend base de fase queda en
+`comfyui operate` con `asset-reference-import` y
+`asset-reference-generate`.
 
 ### Stable Artifacts
 - [`UIPlan.md`](UIPlan.md)
@@ -672,6 +674,7 @@ como engine detras del contrato canonico.
 ### Open Tasks
 - [`19.0`](tasks/19.0-backend-comfyui-asset-reference-operation.md): cerrar la
   operacion backend canonica para referencias de assets antes de la e2e UI
+  — `done`
 - [`19.1`](tasks/19.1-ui-asset-reference-images.md): implementar la capa UI de
   referencias con `ComfyUI` completamente encapsulado
 - [`19.2`](tasks/19.2-phase19-e2e-proof.md): probar una corrida real de

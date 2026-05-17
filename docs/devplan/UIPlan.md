@@ -197,7 +197,7 @@ prompt fuente:
 | `UX-01` | `16` | descripcion de escena | `SvelteKit` + traduccion |
 | `UX-02` | `17` | estructura de almacenamiento de escena | filesystem + `OpenClaw` |
 | `UX-03` | `18` | catalogacion de assets | manifests + `OpenClaw` |
-| `UX-04` | `19` | referencias de assets | `ComfyUI` import/generacion |
+| `UX-04` | `19` | referencias de assets | `ComfyUI` `operate` (`asset-reference-import` / `asset-reference-generate`) |
 | `UX-05` | `20` | importacion o modelado 3D | `Trellis2 GGUF` / `Blender` |
 | `UX-06` | `21` | limpieza automatizada de meshes | `Blender` + `Instant Meshes` |
 | `UX-07` | `22` | rigging automatizado | `Blender` + `Rigify` |
@@ -284,7 +284,7 @@ su prueba end-to-end.
 | Phase UI | Estado backend actual | Accion de endurecimiento |
 | --- | --- | --- |
 | `16-18` | la logica vive en el propio shell web y filesystem del repo | no requiere backend externo nuevo |
-| `19` | `ComfyUI` existe, pero hoy el runner canonico no expone una operacion de referencias de assets | anadir task backend companera |
+| `19` | el runner canonico de `ComfyUI` ya expone `operate` para referencias de assets (`asset-reference-import` y `asset-reference-generate`) | reutilizar task `19.0` como backend base de la UI |
 | `20` | existe linea 3D validada, pero no una operacion canonica de producto para `asset -> 3D` | anadir task backend companera |
 | `21` | backend ya existe en phase `13` | reutilizar phase `13` |
 | `22` | backend ya esta planificado en phase `14`, pero aun no esta cerrado | la UI queda gated por phase `14` |
@@ -307,8 +307,9 @@ Base objetiva del repo hoy:
 - `src/openclaw_studio/runners/registry.py` solo registra `blender`,
   `comfyui` y `hunyuan3d`
 - `src/openclaw_studio/runners/comfyui.py` hoy productiza sobre todo la
-  validacion `validate_smoke`; no expone aun las operaciones de producto que
-  necesitan las fases UI nuevas
+  validacion `validate_smoke` y ya expone `operate` para referencias de assets
+  (`asset-reference-import` y `asset-reference-generate`); el resto de fases UI
+  nuevas sigue pendiente de operaciones dedicadas
 - `src/openclaw_studio/runners/blender.py` hoy solo cierra
   `cleanup_pre_rig_humanoid`
 - `Kimodo` hoy esta provisionado, pero no integrado como bridge o embed de

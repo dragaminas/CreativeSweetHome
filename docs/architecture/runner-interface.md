@@ -145,6 +145,9 @@ Ejemplos:
 - tests atomicos `AT-*`
 - tests compuestos `CP-*`
 - flujos de uso real `UC-*`
+- objetivos de producto `operate` como:
+  - `asset-reference-import`
+  - `asset-reference-generate`
 
 ## `start_run`
 
@@ -215,6 +218,7 @@ Debe incluir:
 - `summary_path`
 - `entity_refs` opcional (`project_id`, `scene_id`, `shot_id`, `asset_id`)
 - `pipeline_stage` opcional para mapear el resultado al estado de negocio
+- `progress_events` opcional cuando el runner publica checkpoints legibles
 
 ## Contrato de evidencia
 
