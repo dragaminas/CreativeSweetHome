@@ -1,6 +1,7 @@
 <script lang="ts">
   import PathList from '$lib/components/PathList.svelte';
   import type {
+    Asset3dRunSummary,
     AssetReferenceRunSummary,
     DirectoryStatus,
     RunnerProgressEvent,
@@ -29,7 +30,10 @@
     'uc-vid-03-image-to-video-reference'
   ];
 
+  const MODEL_3D_PRESET_OPTIONS = ['uc-3d-02-image-to-asset-trellis2-gguf-q4-v1'];
+
   type ReferenceMode = 'import' | 'generate';
+  type Model3dMode = 'import' | 'generate';
 
   interface ReferenceWorkspaceResponse {
     accepted: boolean;
@@ -38,10 +42,17 @@
     run?: AssetReferenceRunSummary;
   }
 
+  interface Model3dWorkspaceResponse {
+    accepted: boolean;
+    status: string;
+    message: string;
+    run?: Asset3dRunSummary;
+  }
+
   $: assetDirectories = selectAssetDirectories(data.studio.directories);
   $: assetCatalog = data.assetCatalog || { total: 0, assets: [] };
   $: readiness = data.assetReadiness || null;
-  $: referenceTargets = (data.referenceTargets || []) as RunnerTargetRecord[];
+  $: operateTargets = (data.referenceTargets || []) as RunnerTargetRecord[];
   $: availableAssets = (assetCatalog.assets || []) as AssetEntry[];
 
   let selectedKind: AssetKind = 'character';
@@ -65,6 +76,17 @@
   let referenceSubmitting = false;
   let referenceRun: AssetReferenceRunSummary | null = null;
   let referenceError = '';
+
+  let model3dAssetId = '';
+  let model3dMode: Model3dMode = 'import';
+  let model3dSourceModelPath = '';
+  let model3dSourceReferencePathsText = '';
+  let model3dBrief = '';
+  let model3dPresetId = MODEL_3D_PRESET_OPTIONS[0];
+  let model3dNotes = '';
+  let model3dSubmitting = false;
+  let model3dRun: Asset3dRunSummary | null = null;
+  let model3dError = '';
 
   function selectAssetDirectories(directories: DirectoryStatus[]): DirectoryStatus[] {
     return directories.filter((directory) =>
@@ -149,7 +171,7 @@
 
   function selectedReferenceTarget(): RunnerTargetRecord | null {
     const targetId = referenceMode === 'import' ? 'asset-reference-import' : 'asset-reference-generate';
-    return referenceTargets.find((target) => target.target_id === targetId) || null;
+    return operateTargets.find((target) => target.target_id === targetId) || null;
   }
 
   function selectedReferenceNotes(): string {
@@ -157,7 +179,17 @@
     return typeof notes === 'string' ? notes : '';
   }
 
-  function normalizeReferenceRun(payload: Record<string, unknown>): AssetReferenceRunSummary {
+  function selectedModel3dTarget(): RunnerTargetRecord | null {
+    const targetId = model3dMode === 'import' ? 'asset-3d-import' : 'asset-3d-generate';
+    return operateTargets.find((target) => target.target_id === targetId) || null;
+  }
+
+  function selectedModel3dNotes(): string {
+    const notes = selectedModel3dTarget()?.metadata?.notes;
+    return typeof notes === 'string' ? notes : '';
+  }
+
+  function normalizeAssetRun(payload: Record<string, unknown>): AssetReferenceRunSummary {
     const metadata =
       payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata)
         ? (payload.metadata as Record<string, unknown>)
@@ -194,12 +226,16 @@
     };
   }
 
-  function canCancel(run: AssetReferenceRunSummary | null): boolean {
+  function canCancel(run: AssetReferenceRunSummary | Asset3dRunSummary | null): boolean {
     return Boolean(run && (run.status === 'running' || run.status === 'queued'));
   }
 
   function isImagePath(filePath: string): boolean {
     return /\.(png|jpe?g|webp|gif|bmp)$/i.test(filePath);
+  }
+
+  function isModelPath(filePath: string): boolean {
+    return /\.(fbx|glb|gltf|obj|ply|stl)$/i.test(filePath);
   }
 
   async function handleCreateAsset() {
@@ -379,7 +415,7 @@
     try {
       const response = await fetch(`/api/runs/comfyui/${referenceRun.run_id}`);
       const payload = (await response.json()) as Record<string, unknown>;
-      referenceRun = normalizeReferenceRun(payload);
+      referenceRun = normalizeAssetRun(payload);
     } catch {
       // no-op
     }
@@ -401,7 +437,107 @@
       });
 
       const payload = (await response.json()) as Record<string, unknown>;
-      referenceRun = normalizeReferenceRun(payload);
+      referenceRun = normalizeAssetRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
+  async function handleModel3dSubmit() {
+    model3dError = '';
+
+    if (!model3dAssetId) {
+      model3dError = 'Selecciona un asset para continuar.';
+      return;
+    }
+
+    if (model3dMode === 'import' && !model3dSourceModelPath.trim()) {
+      model3dError = 'Debes indicar source_model_path para importar un candidato 3D.';
+      return;
+    }
+
+    if (model3dMode === 'generate' && !model3dBrief.trim()) {
+      model3dError = 'El brief es obligatorio para modelar un candidato 3D.';
+      return;
+    }
+
+    const sourcePaths = parseSourcePathsText(model3dSourceReferencePathsText);
+    model3dSubmitting = true;
+
+    try {
+      const response = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: model3dMode === 'import' ? 'asset_3d_import' : 'asset_3d_generate',
+          projectId: activeProjectId,
+          sceneId: activeSceneId,
+          kind: selectedKind,
+          assetId: model3dAssetId,
+          sourceModelPath: model3dSourceModelPath,
+          brief: model3dBrief,
+          presetId: model3dPresetId,
+          notes: model3dNotes,
+          referenceSourcePaths: sourcePaths
+        })
+      });
+
+      const result = (await response.json()) as Model3dWorkspaceResponse;
+      if (!result.accepted || !result.run) {
+        model3dError = result.message || 'No se pudo completar la corrida de asset 3D.';
+        return;
+      }
+
+      model3dRun = result.run;
+      message = result.message;
+      messageType =
+        result.status === 'pass' || result.status === 'soft_pass_with_fallback'
+          ? 'success'
+          : 'error';
+
+      await loadCatalog();
+      await loadReadiness();
+    } catch (error) {
+      model3dError =
+        error instanceof Error
+          ? `No se pudo enviar la corrida 3D: ${error.message}`
+          : 'No se pudo enviar la corrida 3D.';
+    } finally {
+      model3dSubmitting = false;
+    }
+  }
+
+  async function refreshModel3dStatus() {
+    if (!model3dRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/comfyui/${model3dRun.run_id}`);
+      const payload = (await response.json()) as Record<string, unknown>;
+      model3dRun = normalizeAssetRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
+  async function cancelModel3dRun() {
+    if (!model3dRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/comfyui/${model3dRun.run_id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requested_by: 'openclaw-ui',
+          channel: 'web-ui'
+        })
+      });
+
+      const payload = (await response.json()) as Record<string, unknown>;
+      model3dRun = normalizeAssetRun(payload);
     } catch {
       // no-op
     }
@@ -434,6 +570,10 @@
 
   $: if (availableAssets.length > 0 && !availableAssets.some((asset) => asset.assetId === referenceAssetId)) {
     referenceAssetId = availableAssets[0].assetId;
+  }
+
+  $: if (availableAssets.length > 0 && !availableAssets.some((asset) => asset.assetId === model3dAssetId)) {
+    model3dAssetId = availableAssets[0].assetId;
   }
 
   $: activeProjectId = data.projectId || 'default';
@@ -703,6 +843,182 @@
           {:else}
             <ul class="list progress-list">
               {#each referenceRun.progress_events as event}
+                <li>
+                  <code>{event.step_id}</code> · {event.state} · {event.message}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </section>
+
+  <section class="panel fade-in">
+    <h3>Importación o modelado 3D (Trellis2 encapsulado)</h3>
+    <p class="muted">
+      Lleva el asset catalogado a un candidato 3D bajo <code>Assets3D/</code>, con checkpoints y evidencia
+      canónica sin exponer nodos de backend.
+    </p>
+
+    <div class="asset-form">
+      <div class="form-row">
+        <label>
+          Asset:
+          <select bind:value={model3dAssetId} data-testid="asset-3d-asset-id">
+            {#if availableAssets.length === 0}
+              <option value="">Sin assets disponibles</option>
+            {:else}
+              {#each availableAssets as asset}
+                <option value={asset.assetId}>{asset.label} ({asset.assetId})</option>
+              {/each}
+            {/if}
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Modo:
+          <select bind:value={model3dMode} data-testid="asset-3d-mode">
+            <option value="import">Importar modelo 3D existente</option>
+            <option value="generate">Modelar desde brief</option>
+          </select>
+        </label>
+      </div>
+
+      {#if model3dMode === 'import'}
+        <div class="form-row">
+          <label>
+            source_model_path:
+            <input
+              type="text"
+              bind:value={model3dSourceModelPath}
+              placeholder="/ruta/a/modelo.glb"
+              data-testid="asset-3d-source-model-path"
+            />
+          </label>
+        </div>
+      {:else}
+        <div class="form-row">
+          <label>
+            Brief simplificado:
+            <textarea
+              bind:value={model3dBrief}
+              rows="4"
+              placeholder="Describe el candidato 3D que quieres modelar"
+              data-testid="asset-3d-brief"
+            ></textarea>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>
+            Preset de producto:
+            <select bind:value={model3dPresetId} data-testid="asset-3d-preset-id">
+              {#each MODEL_3D_PRESET_OPTIONS as presetId}
+                <option value={presetId}>{presetId}</option>
+              {/each}
+            </select>
+          </label>
+        </div>
+      {/if}
+
+      <div class="form-row">
+        <label>
+          Rutas de referencia opcionales (una por línea):
+          <textarea
+            bind:value={model3dSourceReferencePathsText}
+            rows="3"
+            placeholder="/ruta/a/referencia.png"
+            data-testid="asset-3d-source-reference-paths"
+          ></textarea>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Notas operativas:
+          <input
+            type="text"
+            bind:value={model3dNotes}
+            placeholder="Opcional: contexto extra para la corrida 3D"
+          />
+        </label>
+      </div>
+
+      {#if selectedModel3dNotes()}
+        <p class="muted target-notes">
+          {selectedModel3dNotes()}
+        </p>
+      {/if}
+
+      <div class="row-actions">
+        <button
+          on:click={handleModel3dSubmit}
+          disabled={model3dSubmitting || !model3dAssetId}
+          data-testid="asset-3d-submit"
+        >
+          {model3dSubmitting ? 'Procesando...' : 'Ejecutar 3D'}
+        </button>
+        <button on:click={refreshModel3dStatus} disabled={!model3dRun?.run_id} data-testid="asset-3d-refresh">
+          Refrescar estado
+        </button>
+        <button
+          on:click={cancelModel3dRun}
+          disabled={!canCancel(model3dRun)}
+          data-testid="asset-3d-cancel"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      {#if model3dError}
+        <p class="error-inline">{model3dError}</p>
+      {/if}
+    </div>
+
+    {#if model3dRun}
+      <div class="reference-run-results">
+        <div class="inline-meta">
+          <span class="badge tone-{runStatusTone(model3dRun.status)}" data-testid="asset-3d-run-status">
+            {model3dRun.status}
+          </span>
+          <span class="code-chip">{model3dRun.run_id}</span>
+          <span class="code-chip">{model3dRun.target_id}</span>
+        </div>
+
+        <p data-testid="asset-3d-run-message">{model3dRun.message}</p>
+
+        <p>
+          <strong>Evidencia:</strong>
+          <code data-testid="asset-3d-evidence-path">{model3dRun.evidence_path || 'sin evidencia aún'}</code>
+        </p>
+
+        <div data-testid="asset-3d-artifacts">
+          <strong>Artefactos:</strong>
+          {#if model3dRun.artifact_refs.length === 0}
+            <p class="muted">Sin artefactos publicados.</p>
+          {:else}
+            <ul class="list artifact-list">
+              {#each model3dRun.artifact_refs as artifact}
+                <li>
+                  <code>{artifact}</code>
+                  {#if isModelPath(artifact)}
+                    <span class="muted"> · preview 3d candidate</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div data-testid="asset-3d-checkpoints">
+          <strong>Checkpoints:</strong>
+          {#if model3dRun.progress_events.length === 0}
+            <p class="muted">Sin checkpoints reportados por el runner.</p>
+          {:else}
+            <ul class="list progress-list">
+              {#each model3dRun.progress_events as event}
                 <li>
                   <code>{event.step_id}</code> · {event.state} · {event.message}
                 </li>

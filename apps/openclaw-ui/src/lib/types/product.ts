@@ -241,6 +241,36 @@ export interface StartAssetReferenceRunInput {
   channel?: string;
 }
 
+export interface Asset3dRunSummary {
+  runner_id: string;
+  operation_kind: string;
+  target_id: string;
+  run_id: string;
+  accepted: boolean;
+  status: RunnerExecutionStatus;
+  message: string;
+  artifact_refs: string[];
+  manifest_path?: string;
+  summary_path?: string;
+  evidence_path?: string;
+  progress_events: RunnerProgressEvent[];
+}
+
+export interface StartAsset3dRunInput {
+  mode: 'import' | 'generate';
+  projectId: string;
+  sceneId: string;
+  assetKind: 'character' | 'object';
+  assetId: string;
+  sourceModelPath?: string;
+  briefText?: string;
+  presetId?: string;
+  referenceSourcePaths?: string[];
+  notes?: string;
+  requestedBy?: string;
+  channel?: string;
+}
+
 export interface EmbedWorkspaceSeam {
   workspaceId: string;
   sameOriginPath: ProductRoute;

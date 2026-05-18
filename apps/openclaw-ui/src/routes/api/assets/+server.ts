@@ -4,7 +4,7 @@ import { json } from '@sveltejs/kit';
 
 import { asRecord, asString, asNullableString, asStringArray } from '$lib/server/http';
 import { buildAssetReferenceBriefText } from '$lib/server/brief-translator';
-import { startAssetReferenceRun } from '$lib/server/runner-bridge';
+import { startAsset3dRun, startAssetReferenceRun } from '$lib/server/runner-bridge';
 import {
   listAssets,
   createAsset,
@@ -357,11 +357,117 @@ export const POST: RequestHandler = async ({ request }) => {
       );
     }
 
+    if (action === 'asset_3d_import' || action === 'asset_3d_generate') {
+      const assetId = asString(body.assetId || '');
+      if (!assetId) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'assetId es obligatorio para gestionar modelado 3D.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const sourceModelPath = asString(body.sourceModelPath || body.source_model_path);
+      if (action === 'asset_3d_import' && !sourceModelPath.trim()) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'source_model_path es obligatorio para importar un candidato 3D.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const catalog = await listAssets({
+        projectId,
+        sceneId,
+        kind
+      });
+      const asset = catalog.assets.find((entry) => entry.assetId === assetId);
+      if (!asset) {
+        return json(
+          {
+            accepted: false,
+            status: 'not_found',
+            message: `No se encontro el asset ${assetId} en el catalogo ${kind}.`
+          },
+          { status: 404 }
+        );
+      }
+
+      const draftBrief = asString(body.brief || body.briefText || body.prompt || asset.description || asset.label);
+      if (action === 'asset_3d_generate' && !draftBrief.trim()) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'brief es obligatorio para modelar un candidato 3D.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const referenceSourcePaths = parseReferenceSourcePaths(
+        body.referenceSourcePaths ?? body.reference_source_paths
+      );
+      const run = await startAsset3dRun({
+        mode: action === 'asset_3d_import' ? 'import' : 'generate',
+        projectId,
+        sceneId,
+        assetKind: kind,
+        assetId,
+        sourceModelPath,
+        briefText: buildAssetReferenceBriefText({
+          projectId,
+          sceneId,
+          assetKind: kind,
+          assetId,
+          assetLabel: asset.label,
+          assetDescription: asset.description,
+          brief: draftBrief,
+          references: asset.references,
+          notes: asString(body.notes)
+        }),
+        presetId: asString(body.presetId, 'uc-3d-02-image-to-asset-trellis2-gguf-q4-v1'),
+        notes: asString(body.notes),
+        referenceSourcePaths
+      });
+
+      const updated = await updateAsset({
+        projectId,
+        sceneId,
+        kind,
+        assetId,
+        stage: 'model_3d',
+        stageState: mapRunStatusToAssetStageState(run.status)
+      });
+
+      return json(
+        {
+          accepted: run.accepted,
+          status: run.status,
+          message: run.message,
+          assetId,
+          asset: updated.asset,
+          manifestPath: updated.manifestPath,
+          run
+        },
+        { status: run.accepted ? 200 : 502 }
+      );
+    }
+
     return json(
       {
         accepted: false,
         status: 'fail_compile',
-        message: `Acción "${action}" no soportada en POST. Usa "create", "update" o "delete".`
+        message:
+          `Acción "${action}" no soportada en POST. ` +
+          'Usa "create", "update", "reference_import", "reference_generate", ' +
+          '"asset_3d_import" o "asset_3d_generate".'
       },
       { status: 400 }
     );

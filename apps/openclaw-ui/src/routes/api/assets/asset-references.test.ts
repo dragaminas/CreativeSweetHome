@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { startRunMock } = vi.hoisted(() => ({ startRunMock: vi.fn() }));
 
 vi.mock('$lib/server/runner-bridge', () => ({
-  startAssetReferenceRun: startRunMock
+  startAssetReferenceRun: startRunMock,
+  startAsset3dRun: vi.fn()
 }));
 
 import { GET, POST } from './+server';

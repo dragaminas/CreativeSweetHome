@@ -55,6 +55,10 @@ describe('entity editors', () => {
     expect(body).toContain('character');
     expect(body).toContain('Assets3D/pilot-project/asset-nora');
     expect(body).toContain('2048');
+    expect(body).toContain('Controles de asset 3D');
+    expect(body).toContain('Generar referencia');
+    expect(body).toContain('Generar modelo 3D');
+    expect(body).toContain('Abrir en Blender');
   });
 
   it('renders a specific scene from the SceneEdition contract', () => {

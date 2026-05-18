@@ -2,11 +2,13 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 import type {
+  Asset3dRunSummary,
   AssetReferenceRunSummary,
   RunnerCatalog,
   RunnerDescriptionRecord,
   RunnerProgressEvent,
   RunnerTargetRecord,
+  StartAsset3dRunInput,
   StartAssetReferenceRunInput,
   StartRunPayload
 } from '$lib/types/product';
@@ -224,6 +226,34 @@ export async function startAssetReferenceRun(
       asset_id: input.assetId,
       brief_text: asString(input.briefText),
       preset_id: asString(input.presetId, 'uc-img-02-frame-baseline-preview'),
+      reference_source_paths: input.referenceSourcePaths || [],
+      notes: asString(input.notes)
+    }
+  });
+
+  return toAssetReferenceRunSummary(response);
+}
+
+export async function startAsset3dRun(
+  input: StartAsset3dRunInput
+): Promise<Asset3dRunSummary> {
+  const targetId =
+    input.mode === 'import' ? 'asset-3d-import' : 'asset-3d-generate';
+
+  const response = await startRun({
+    runner_id: 'comfyui',
+    operation_kind: 'operate',
+    target_id: targetId,
+    requested_by: input.requestedBy || 'openclaw-ui',
+    channel: input.channel || 'web-ui',
+    inputs: {
+      project_id: input.projectId,
+      scene_id: input.sceneId,
+      asset_kind: input.assetKind,
+      asset_id: input.assetId,
+      source_model_path: asString(input.sourceModelPath),
+      brief_text: asString(input.briefText),
+      preset_id: asString(input.presetId, 'uc-3d-02-image-to-asset-trellis2-gguf-q4-v1'),
       reference_source_paths: input.referenceSourcePaths || [],
       notes: asString(input.notes)
     }

@@ -574,3 +574,93 @@ test.describe('phase19-asset-references', () => {
     expect(updatedAsset?.stageState).toBe('ready');
   });
 });
+
+test.describe('phase20-asset-3d', () => {
+  test('imports a 3D asset candidate from the assets workspace and persists canonical Assets3D evidence', async ({
+    page,
+    request
+  }) => {
+    const uniqueSuffix = Date.now();
+    const projectId = `phase20-proof-${uniqueSuffix}`;
+    const sceneId = 'asset-3d-scene';
+    const shotId = 'sh010';
+    const assetLabel = `Nora3D-${uniqueSuffix}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: assetLabel,
+        description: 'Piloto principal para pruebas de importación 3D.'
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+
+    const tempModelsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-phase20-models-'));
+    const sourceModelPath = path.join(tempModelsDir, 'candidate-source.glb');
+    await fs.writeFile(sourceModelPath, 'placeholder-glb-content', 'utf8');
+
+    const expectedCandidatePath = path.join(
+      STUDIO_DIR,
+      'Assets3D',
+      projectId,
+      createAssetPayload.assetId,
+      'comfyui',
+      'output',
+      `${createAssetPayload.assetId}__mesh_candidate__v001.glb`
+    );
+
+    await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+
+    await page.getByTestId('asset-3d-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('asset-3d-mode').selectOption('import');
+    await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
+    await page.getByTestId('asset-3d-submit').click();
+
+    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass');
+    await expect(page.getByTestId('asset-3d-run-message')).toContainText(
+      'Candidato 3D importado'
+    );
+    await expect(page.getByTestId('asset-3d-artifacts')).toContainText(
+      `${createAssetPayload.assetId}__mesh_candidate__v001.glb`
+    );
+    await expect(page.getByTestId('asset-3d-artifacts')).toContainText('preview 3d candidate');
+    await expect(page.getByTestId('asset-3d-checkpoints')).toContainText(
+      'publish-asset-3d-candidate'
+    );
+    await expect(page.getByTestId('asset-3d-evidence-path')).toContainText(
+      '/Validation/comfyui/operate/'
+    );
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedCandidatePath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
+
+    const listResponse = await request.get(
+      `/api/assets?projectId=${projectId}&sceneId=${sceneId}&kind=character`
+    );
+    expect(listResponse.ok()).toBeTruthy();
+    const listPayload = (await listResponse.json()) as {
+      assets: Array<{ assetId: string; stage: string; stageState: string }>;
+    };
+    const updatedAsset = listPayload.assets.find((entry) => entry.assetId === createAssetPayload.assetId);
+    expect(updatedAsset?.stage).toBe('model_3d');
+    expect(updatedAsset?.stageState).toBe('ready');
+  });
+});

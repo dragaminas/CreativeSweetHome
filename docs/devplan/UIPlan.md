@@ -197,6 +197,18 @@ en `comfyui operate` para `asset -> 3D candidate`:
 - feedback de run: estado legible, checkpoints y evidencia de la operacion en
   `STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`
 
+La UI de `/workspaces/assets` ya consume ambos targets con modo `import` y
+`generate`, validaciones de entrada, estado legible y artefactos canonicos.
+Tambien expone controles de `AssetEdition` en el `AssetEditor` tipado
+(`generateImage/uploadImage/generateModel/uploadModel/openInBlender`) para
+mantener la frontera de edicion alineada con los tipos de navegacion UI.
+
+La prueba browser-backed `phase20-asset-3d` valida la importacion real de un
+candidato 3D desde la UI y confirma persistencia en
+`STUDIO_DIR/Assets3D/<project>/<asset>/...` junto con la actualizacion de
+etapa `model_3d` y evidencia en
+`STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

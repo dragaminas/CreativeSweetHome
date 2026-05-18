@@ -680,7 +680,7 @@ como engine detras del contrato canonico. El backend base de fase queda en
 ## Phase 20: Importacion o modelado 3D de assets en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Llevar a la UI el paso `asset brief -> importado/modelado 3D` reutilizando la
@@ -705,7 +705,7 @@ crear otro pipeline 3D paralelo. Los resultados deben publicarse bajo
 - [`20.0`](tasks/20.0-backend-asset-3d-operation.md): cerrar la operacion
   backend canonica `asset -> 3D` antes de la e2e UI — `done`
 - [`20.1`](tasks/20.1-ui-asset-3d-import-or-modeling.md): implementar la
-  integracion UI con la ruta 3D vigente del repo
+  integracion UI con la ruta 3D vigente del repo — `done`
 - [`20.2`](tasks/20.2-phase20-e2e-proof.md): probar un asset real hasta el
   resultado 3D publicado bajo `Assets3D/`
 
