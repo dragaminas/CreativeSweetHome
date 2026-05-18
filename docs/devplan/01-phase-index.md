@@ -771,7 +771,7 @@ estados, previews, warnings y evidencia del target canonico de rigging.
 ## Phase 23: Descripcion de tomas en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Traducir la escena y sus assets listos a una capa de authoring de tomas guiada
@@ -793,7 +793,7 @@ escena, de los assets y del pipeline, listos para animacion y composicion.
 
 ### Open Tasks
 - [`23.1`](tasks/23.1-ui-shot-description-workspace.md): implementar la
-  captura guiada de tomas dentro del shell de producto
+  captura guiada de tomas dentro del shell de producto — `done`
 - [`23.2`](tasks/23.2-phase23-e2e-proof.md): probar la creacion real de una
   toma conectada a una escena y assets existentes
 

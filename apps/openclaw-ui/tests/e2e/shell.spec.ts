@@ -947,3 +947,72 @@ test.describe('phase22-rigging', () => {
     );
   });
 });
+
+
+test.describe('phase23-shot-brief', () => {
+  test('captures and persists a reusable shot brief from the workspace UI', async ({
+    page,
+    request
+  }) => {
+    const uniqueSuffix = Date.now();
+    const projectId = `phase23-proof-${uniqueSuffix}`;
+    const sceneId = 'shot-brief-scene';
+    const shotId = 'sh010';
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const expectedFilePath = path.join(
+      STUDIO_DIR,
+      'Scenes',
+      projectId,
+      sceneId,
+      'shots',
+      shotId,
+      'briefs',
+      'shot-brief.json'
+    );
+
+    await page.goto('/workspaces/shot');
+
+    await page.getByTestId('shot-brief-project-id').fill(projectId);
+    await page.getByTestId('shot-brief-scene-id').fill(sceneId);
+    await page.getByTestId('shot-brief-shot-id').fill(shotId);
+    await page.getByTestId('shot-brief-intent').fill('Nora entra al callejon y mira hacia la camara.');
+    await page.getByTestId('shot-brief-framing').fill('Plano medio con travelling corto y angulo ligeramente bajo.');
+    await page.getByTestId('shot-brief-duration-ms').fill('4200');
+    await page.getByTestId('shot-brief-characters').fill('Nora');
+    await page.getByTestId('shot-brief-constraints').fill('24fps\ncontinuidad de lluvia');
+    await page.getByTestId('shot-brief-references').fill('shotdeck-rain-night');
+
+    await page.getByTestId('shot-brief-submit').click();
+
+    await expect(page.getByTestId('shot-brief-checkpoint-status')).toContainText('accepted');
+    await expect(page.getByTestId('shot-brief-saved-path')).toContainText('/shots/sh010/briefs/shot-brief.json');
+    await expect(page.getByTestId('shot-brief-feedback')).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedFilePath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
+
+    const artifact = JSON.parse(await fs.readFile(expectedFilePath, 'utf8')) as {
+      projectId: string;
+      sceneId: string;
+      shotId: string;
+      checkpoint: { status: string };
+      source: { durationMs: number; characters: string[] };
+    };
+
+    expect(artifact.projectId).toBe(projectId);
+    expect(artifact.sceneId).toBe(sceneId);
+    expect(artifact.shotId).toBe(shotId);
+    expect(artifact.checkpoint.status).toBe('accepted');
+    expect(artifact.source.durationMs).toBe(4200);
+    expect(artifact.source.characters).toEqual(['Nora']);
+  });
+});

@@ -5,6 +5,7 @@ export type RouteRole = 'authoring' | 'pipeline' | 'embedded' | 'engine' | 'assi
 export type ProductRoute =
   | '/'
   | '/workspaces/scene'
+  | '/workspaces/shot'
   | '/workspaces/assets'
   | '/workspaces/kimodo'
   | '/workspaces/kimodo/embed'
@@ -155,6 +156,58 @@ export interface SceneBriefApiResponse {
   status: SceneBriefCheckpointStatus | 'fail_compile' | 'fail_runtime';
   message: string;
   artifact?: SceneBriefArtifact;
+  filePath?: string;
+}
+
+export type ShotBriefCheckpointStatus = 'accepted' | 'incomplete' | 'ambiguous';
+export type ShotConsistencyStatus = 'consistent' | 'needs_review';
+
+export interface ShotBriefSourceFields {
+  intent: string;
+  framing: string;
+  durationMs: number;
+  narrative: string;
+  characters: string[];
+  constraints: string[];
+  references: string[];
+}
+
+export interface ShotBriefCheckpoint {
+  status: ShotBriefCheckpointStatus;
+  label: string;
+  notes: string[];
+}
+
+export interface ShotBriefConsistency {
+  status: ShotConsistencyStatus;
+  notes: string[];
+  sceneManifestPath: string;
+  assetsManifestPath: string;
+  shotManifestPath: string;
+  availableCharacterIds: string[];
+  availableCharacterLabels: string[];
+  missingCharacters: string[];
+}
+
+export interface ShotBriefArtifact {
+  schemaVersion: 1;
+  createdAt: string;
+  briefId: string;
+  projectId: string;
+  sceneId: string;
+  shotId: string;
+  workspaceId: 'shot';
+  source: ShotBriefSourceFields;
+  checkpoint: ShotBriefCheckpoint;
+  consistency: ShotBriefConsistency;
+  sharedBrief: SharedBrief;
+}
+
+export interface ShotBriefApiResponse {
+  accepted: boolean;
+  status: ShotBriefCheckpointStatus | 'fail_compile' | 'fail_runtime';
+  message: string;
+  artifact?: ShotBriefArtifact;
   filePath?: string;
 }
 

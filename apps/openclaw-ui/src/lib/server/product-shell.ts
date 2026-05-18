@@ -56,6 +56,25 @@ export function buildWorkspaceCatalog(
       ]
     },
     {
+      id: 'shot',
+      label: 'Shot authoring',
+      phase: '23',
+      path: '/workspaces/shot',
+      routeRole: 'authoring',
+      stateLabel: 'Available',
+      stateTone: 'positive',
+      summary:
+        'Traduce la intencion de toma a un shot brief reusable para animacion, composicion y render.',
+      boundary:
+        'El workspace valida consistencia contra escena/assets sin abrir un modelo paralelo de persistencia.',
+      runnerIds: [],
+      evidenceRoots: [],
+      notes: [
+        'Captura guiada de intent, framing, duracion, personajes y constraints',
+        'Persistencia canonica en STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/briefs/shot-brief.json'
+      ]
+    },
+    {
       id: 'kimodo',
       label: 'Kimodo',
       phase: '24',

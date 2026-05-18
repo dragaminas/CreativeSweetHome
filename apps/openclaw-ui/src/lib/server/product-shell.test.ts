@@ -28,10 +28,12 @@ describe('buildProductShell', () => {
     const kimodo = shell.workspaces.find((workspace) => workspace.id === 'kimodo');
     const comfyui = shell.workspaces.find((workspace) => workspace.id === 'comfyui');
     const scene = shell.workspaces.find((workspace) => workspace.id === 'scene');
+    const shot = shell.workspaces.find((workspace) => workspace.id === 'shot');
 
     expect(shell.workspaces.map((workspace) => workspace.id)).toEqual([
       'scene',
       'assets',
+      'shot',
       'kimodo',
       'blender',
       'comfyui',
@@ -43,5 +45,7 @@ describe('buildProductShell', () => {
     expect(scene?.stateLabel).toBe('Available');
     expect(scene?.stateTone).toBe('positive');
     expect(scene?.notes.join(' ')).toMatch(/scene brief/i);
+    expect(shot?.path).toBe('/workspaces/shot');
+    expect(shot?.notes.join(' ')).toMatch(/shot-brief\.json/i);
   });
 });
