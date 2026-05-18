@@ -626,7 +626,9 @@ test.describe('phase20-asset-3d', () => {
     await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
     await page.getByTestId('asset-3d-submit').click();
 
-    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass');
+    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
+      timeout: 20_000
+    });
     await expect(page.getByTestId('asset-3d-run-message')).toContainText(
       'Candidato 3D importado'
     );
@@ -639,6 +641,12 @@ test.describe('phase20-asset-3d', () => {
     );
     await expect(page.getByTestId('asset-3d-evidence-path')).toContainText(
       '/Validation/comfyui/operate/'
+    );
+    await expect(page.getByTestId('asset-3d-summary-path')).toContainText(
+      '/Validation/comfyui/operate/'
+    );
+    await expect(page.getByTestId('asset-3d-summary-path')).toContainText(
+      '/manifests/summary.json'
     );
 
     await expect

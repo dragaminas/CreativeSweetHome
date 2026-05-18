@@ -208,6 +208,9 @@ candidato 3D desde la UI y confirma persistencia en
 `STUDIO_DIR/Assets3D/<project>/<asset>/...` junto con la actualizacion de
 etapa `model_3d` y evidencia en
 `STUDIO_DIR/Validation/comfyui/operate/<run_id>/...`.
+La prueba de cierre de task `20.2` endurece ademas la evidencia visible en UI
+con `summary_path` (`.../Validation/comfyui/operate/<run_id>/manifests/summary.json`)
+ademas de `evidence_path`, manteniendo el flujo canonico sin rutas paralelas.
 
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:

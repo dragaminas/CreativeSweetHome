@@ -994,6 +994,11 @@
           <code data-testid="asset-3d-evidence-path">{model3dRun.evidence_path || 'sin evidencia aún'}</code>
         </p>
 
+        <p>
+          <strong>Resumen:</strong>
+          <code data-testid="asset-3d-summary-path">{model3dRun.summary_path || 'sin resumen aún'}</code>
+        </p>
+
         <div data-testid="asset-3d-artifacts">
           <strong>Artefactos:</strong>
           {#if model3dRun.artifact_refs.length === 0}
