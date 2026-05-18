@@ -1,10 +1,19 @@
+import fs from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
+import path from 'node:path';
+
 import type { RequestHandler } from './$types';
 
 import { json } from '@sveltejs/kit';
 
 import { asRecord, asString, asNullableString, asStringArray } from '$lib/server/http';
 import { buildAssetReferenceBriefText } from '$lib/server/brief-translator';
-import { startAsset3dRun, startAssetReferenceRun } from '$lib/server/runner-bridge';
+import { resolveRepoContext } from '$lib/server/env';
+import {
+  startAsset3dRun,
+  startAssetReferenceRun,
+  startMeshCleanupRun
+} from '$lib/server/runner-bridge';
 import {
   listAssets,
   createAsset,
@@ -49,11 +58,111 @@ function parseReferenceSourcePaths(value: unknown): string[] {
   return [];
 }
 
-function mapRunStatusToAssetStageState(status: string): AssetStageState {
+function parseCleanupMode(value: unknown): 'auto' | 'debug' | null {
+  if (value === undefined || value === null || value === '') {
+    return 'auto';
+  }
+
+  if (value === 'auto' || value === 'debug') {
+    return value;
+  }
+
+  return null;
+}
+
+async function fileExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveMeshCleanupSourceModelPath(
+  projectId: string,
+  assetId: string
+): Promise<string | null> {
+  const context = resolveRepoContext();
+  const assetRoot = path.join(context.assets3dDir, projectId, assetId);
+
+  const directCandidates = [
+    path.join(assetRoot, 'blender', 'imports', `${assetId}__mesh_candidate__v001.glb`),
+    path.join(assetRoot, 'blender', 'imports', `${assetId}__mesh_candidate__v001.gltf`),
+    path.join(assetRoot, 'comfyui', 'output', `${assetId}__mesh_candidate__v001.glb`),
+    path.join(assetRoot, 'comfyui', 'output', `${assetId}__mesh_candidate__v001.gltf`)
+  ];
+
+  for (const directCandidate of directCandidates) {
+    if (await fileExists(directCandidate)) {
+      return directCandidate;
+    }
+  }
+
+  const searchRoots = [
+    path.join(assetRoot, 'blender', 'imports'),
+    path.join(assetRoot, 'comfyui', 'output')
+  ];
+  const supportedExtensions = new Set(['.fbx', '.glb', '.gltf', '.obj', '.ply', '.stl']);
+  const discovered: Array<{ filePath: string; mtimeMs: number; score: number }> = [];
+
+  for (const rootPath of searchRoots) {
+    let entries: Dirent[] = [];
+    try {
+      entries = await fs.readdir(rootPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      const extension = path.extname(entry.name).toLowerCase();
+      if (!supportedExtensions.has(extension)) {
+        continue;
+      }
+
+      const filePath = path.join(rootPath, entry.name);
+      try {
+        const stats = await fs.stat(filePath);
+        discovered.push({
+          filePath,
+          mtimeMs: stats.mtimeMs,
+          score: entry.name.includes('mesh_candidate') ? 2 : 1
+        });
+      } catch {
+        // ignore stale files
+      }
+    }
+  }
+
+  if (discovered.length === 0) {
+    return null;
+  }
+
+  discovered.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return b.mtimeMs - a.mtimeMs;
+  });
+
+  return discovered[0]?.filePath || null;
+}
+
+function mapRunStatusToAssetStageState(
+  status: string,
+  options: { softPassAsReady?: boolean } = {}
+): AssetStageState {
   if (status === 'pass') {
     return 'ready';
   }
-  if (status === 'running' || status === 'queued' || status === 'soft_pass_with_fallback') {
+  if (status === 'soft_pass_with_fallback') {
+    return options.softPassAsReady ? 'ready' : 'in_progress';
+  }
+  if (status === 'running' || status === 'queued') {
     return 'in_progress';
   }
   if (status === 'cancelled') {
@@ -460,6 +569,99 @@ export const POST: RequestHandler = async ({ request }) => {
       );
     }
 
+    if (action === 'mesh_cleanup') {
+      const assetId = asString(body.assetId || '');
+      if (!assetId) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'assetId es obligatorio para ejecutar cleanup de meshes.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const mode = parseCleanupMode(body.mode);
+      if (!mode) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'mode debe ser "auto" o "debug".'
+          },
+          { status: 400 }
+        );
+      }
+
+      const catalog = await listAssets({
+        projectId,
+        sceneId,
+        kind
+      });
+      const asset = catalog.assets.find((entry) => entry.assetId === assetId);
+      if (!asset) {
+        return json(
+          {
+            accepted: false,
+            status: 'not_found',
+            message: `No se encontro el asset ${assetId} en el catalogo ${kind}.`
+          },
+          { status: 404 }
+        );
+      }
+
+      const sourceModelPathInput = asString(body.sourceModelPath || body.source_model_path).trim();
+      const sourceModelPath =
+        sourceModelPathInput ||
+        (await resolveMeshCleanupSourceModelPath(catalog.projectId, asset.assetId));
+      if (!sourceModelPath) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message:
+              'source_model_path es obligatorio para cleanup. Importa primero un candidato 3D o especifica la ruta manual.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const run = await startMeshCleanupRun({
+        projectId: catalog.projectId,
+        sceneId: catalog.sceneId,
+        assetKind: kind,
+        assetId: asset.assetId,
+        sourceModelPath,
+        mode,
+        notes: asString(body.notes)
+      });
+
+      const updated = await updateAsset({
+        projectId: catalog.projectId,
+        sceneId: catalog.sceneId,
+        kind,
+        assetId: asset.assetId,
+        stage: 'model_3d',
+        stageState: mapRunStatusToAssetStageState(run.status, {
+          softPassAsReady: true
+        })
+      });
+
+      return json(
+        {
+          accepted: run.accepted,
+          status: run.status,
+          message: run.message,
+          assetId: asset.assetId,
+          asset: updated.asset,
+          manifestPath: updated.manifestPath,
+          run
+        },
+        { status: run.accepted ? 200 : 502 }
+      );
+    }
+
     return json(
       {
         accepted: false,
@@ -467,7 +669,7 @@ export const POST: RequestHandler = async ({ request }) => {
         message:
           `Acción "${action}" no soportada en POST. ` +
           'Usa "create", "update", "reference_import", "reference_generate", ' +
-          '"asset_3d_import" o "asset_3d_generate".'
+          '"asset_3d_import", "asset_3d_generate" o "mesh_cleanup".'
       },
       { status: 400 }
     );

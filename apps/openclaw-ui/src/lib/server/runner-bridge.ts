@@ -4,11 +4,14 @@ import path from 'node:path';
 import type {
   Asset3dRunSummary,
   AssetReferenceRunSummary,
+  MeshCleanupRunSummary,
   RunnerCatalog,
+  RunnerCommandLog,
   RunnerDescriptionRecord,
   RunnerProgressEvent,
   RunnerTargetRecord,
   StartAsset3dRunInput,
+  StartMeshCleanupRunInput,
   StartAssetReferenceRunInput,
   StartRunPayload
 } from '$lib/types/product';
@@ -58,6 +61,41 @@ function progressEventsFromMetadata(value: unknown): RunnerProgressEvent[] {
     }));
 }
 
+function commandLogsFromMetadata(value: unknown): RunnerCommandLog[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => asRecord(entry))
+    .filter((entry) => asString(entry.stage))
+    .map((entry) => ({
+      stage: asString(entry.stage),
+      command_text: asString(entry.command_text) || asString(entry.command),
+      stdout_log_path: asString(entry.stdout_log_path) || undefined,
+      stderr_log_path: asString(entry.stderr_log_path) || undefined,
+      exit_code: typeof entry.exit_code === 'number' ? entry.exit_code : undefined,
+      started_at: asString(entry.started_at) || undefined,
+      completed_at: asString(entry.completed_at) || undefined
+    }));
+}
+
+function progressEventsFromCommandLogs(commandLogs: RunnerCommandLog[]): RunnerProgressEvent[] {
+  return commandLogs.map((entry) => ({
+    at: entry.completed_at || entry.started_at,
+    step_id: entry.stage || 'command',
+    state: entry.exit_code === 0 ? 'done' : 'failed',
+    message:
+      entry.exit_code === undefined
+        ? 'Comando ejecutado.'
+        : `Comando ejecutado con exit_code=${entry.exit_code}.`
+  }));
+}
+
+function artifactRefMatching(artifactRefs: string[], pattern: RegExp): string | undefined {
+  return artifactRefs.find((artifactRef) => pattern.test(artifactRef));
+}
+
 function toAssetReferenceRunSummary(payload: Record<string, unknown>): AssetReferenceRunSummary {
   const metadata = asRecord(payload.metadata);
 
@@ -74,6 +112,40 @@ function toAssetReferenceRunSummary(payload: Record<string, unknown>): AssetRefe
     summary_path: asString(payload.summary_path) || undefined,
     evidence_path: asString(payload.evidence_path) || undefined,
     progress_events: progressEventsFromMetadata(metadata.progress_events)
+  };
+}
+
+function toMeshCleanupRunSummary(payload: Record<string, unknown>): MeshCleanupRunSummary {
+  const metadata = asRecord(payload.metadata);
+  const artifact_refs = asStringArray(payload.artifact_refs);
+  const command_logs = commandLogsFromMetadata(metadata.command_logs);
+  const metadataProgressEvents = progressEventsFromMetadata(metadata.progress_events);
+  const progress_events =
+    metadataProgressEvents.length > 0
+      ? metadataProgressEvents
+      : progressEventsFromCommandLogs(command_logs);
+
+  return {
+    runner_id: asString(payload.runner_id, 'blender'),
+    operation_kind: asString(payload.operation_kind, 'operate'),
+    target_id: asString(payload.target_id, 'cleanup_pre_rig_humanoid'),
+    run_id: asString(payload.run_id),
+    accepted: asBoolean(payload.accepted, true),
+    status: asString(payload.status),
+    message: asString(payload.message),
+    artifact_refs,
+    manifest_path: asString(payload.manifest_path) || undefined,
+    summary_path: asString(payload.summary_path) || undefined,
+    evidence_path: asString(payload.evidence_path) || undefined,
+    cleanup_report_path:
+      asString(payload.evidence_path) ||
+      artifactRefMatching(artifact_refs, /cleanup-report\.md$/i),
+    source_model_path: artifactRefMatching(artifact_refs, /__source__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
+    cleaned_model_path: artifactRefMatching(artifact_refs, /__cleaned__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
+    remeshed_model_path: artifactRefMatching(artifact_refs, /__remeshed__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
+    progress_events,
+    warnings: asStringArray(metadata.warnings),
+    command_logs
   };
 }
 
@@ -260,6 +332,41 @@ export async function startAsset3dRun(
   });
 
   return toAssetReferenceRunSummary(response);
+}
+
+export async function startMeshCleanupRun(
+  input: StartMeshCleanupRunInput
+): Promise<MeshCleanupRunSummary> {
+  const response = await startRun({
+    runner_id: 'blender',
+    operation_kind: 'operate',
+    target_id: 'cleanup_pre_rig_humanoid',
+    requested_by: input.requestedBy || 'openclaw-ui',
+    channel: input.channel || 'web-ui',
+    inputs: {
+      project_id: input.projectId,
+      scene_id: input.sceneId,
+      asset_kind: input.assetKind,
+      entity_id: input.assetId,
+      source_model_path: input.sourceModelPath,
+      notes: asString(input.notes)
+    },
+    options: {
+      mode: input.mode || 'auto'
+    }
+  });
+
+  const runId = asString(response.run_id);
+  if (!runId) {
+    return toMeshCleanupRunSummary(response);
+  }
+
+  try {
+    const statusPayload = await getRunStatus('blender', runId);
+    return toMeshCleanupRunSummary(statusPayload);
+  } catch {
+    return toMeshCleanupRunSummary(response);
+  }
 }
 
 export async function getRunStatus(

@@ -212,6 +212,22 @@ La prueba de cierre de task `20.2` endurece ademas la evidencia visible en UI
 con `summary_path` (`.../Validation/comfyui/operate/<run_id>/manifests/summary.json`)
 ademas de `evidence_path`, manteniendo el flujo canonico sin rutas paralelas.
 
+Para `UX-06` (phase `21`) el workspace `/workspaces/assets` ya integra el
+cleanup pre-rigging sobre `blender operate` sin crear wrappers paralelos:
+
+- accion UI `mesh_cleanup` que dispara el target canonico
+  `cleanup_pre_rig_humanoid`
+- `source_model_path` opcional con autodeteccion desde
+  `Assets3D/<project>/<asset>/{blender/imports,comfyui/output}/...`
+- feedback legible en la UI con `run status`, readiness para rigging, refs
+  before/after, `cleanup-report.md`, warnings y diagnostico por comando
+- evidencia preservada bajo `Assets3D/<project>/<asset>/cleanup/<run_id>/...`
+  con `manifest_path`, `summary_path` y artefactos publicados por el runner
+
+La prueba browser-backed `phase21-mesh-cleanup` valida el hook e2e de la
+integracion y el feedback accionable cuando falta `source_model_path`,
+manteniendo el flujo canonico para la prueba real de `21.2`.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

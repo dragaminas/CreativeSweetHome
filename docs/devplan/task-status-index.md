@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `76`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `26`
-- `pending`: `39`
+- `done`: `27`
+- `pending`: `38`
 
 ## Tasks
 
@@ -55,7 +55,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `20.0` Backend canonico de asset a 3D | `20` Importacion o modelado 3D de assets en UI | `done` | [docs/devplan/tasks/20.0-backend-asset-3d-operation.md](docs/devplan/tasks/20.0-backend-asset-3d-operation.md) |
 | `20.1` Importacion o modelado 3D de assets en UI | `20` Importacion o modelado 3D de assets en UI | `done` | [docs/devplan/tasks/20.1-ui-asset-3d-import-or-modeling.md](docs/devplan/tasks/20.1-ui-asset-3d-import-or-modeling.md) |
 | `20.2` Prueba end-to-end de Phase 20 | `20` Importacion o modelado 3D de assets en UI | `done` | [docs/devplan/tasks/20.2-phase20-e2e-proof.md](docs/devplan/tasks/20.2-phase20-e2e-proof.md) |
-| `21.1` Integracion UI del cleanup de meshes | `21` Cleanup automatizado de meshes en UI | `pending` | [docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md](docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md) |
+| `21.1` Integracion UI del cleanup de meshes | `21` Cleanup automatizado de meshes en UI | `done` | [docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md](docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md) |
 | `21.2` Prueba end-to-end de Phase 21 | `21` Cleanup automatizado de meshes en UI | `pending` | [docs/devplan/tasks/21.2-phase21-e2e-proof.md](docs/devplan/tasks/21.2-phase21-e2e-proof.md) |
 | `22.1` Integracion UI del rigging automatizado | `22` Rigging automatizado de assets en UI | `pending` | [docs/devplan/tasks/22.1-ui-rigging-integration.md](docs/devplan/tasks/22.1-ui-rigging-integration.md) |
 | `22.2` Prueba end-to-end de Phase 22 | `22` Rigging automatizado de assets en UI | `pending` | [docs/devplan/tasks/22.2-phase22-e2e-proof.md](docs/devplan/tasks/22.2-phase22-e2e-proof.md) |

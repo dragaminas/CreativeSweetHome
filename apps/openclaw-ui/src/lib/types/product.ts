@@ -212,6 +212,16 @@ export interface RunnerProgressEvent {
   message: string;
 }
 
+export interface RunnerCommandLog {
+  stage: string;
+  command_text: string;
+  stdout_log_path?: string;
+  stderr_log_path?: string;
+  exit_code?: number;
+  started_at?: string;
+  completed_at?: string;
+}
+
 export interface AssetReferenceRunSummary {
   runner_id: string;
   operation_kind: string;
@@ -266,6 +276,39 @@ export interface StartAsset3dRunInput {
   briefText?: string;
   presetId?: string;
   referenceSourcePaths?: string[];
+  notes?: string;
+  requestedBy?: string;
+  channel?: string;
+}
+
+export interface MeshCleanupRunSummary {
+  runner_id: string;
+  operation_kind: string;
+  target_id: string;
+  run_id: string;
+  accepted: boolean;
+  status: RunnerExecutionStatus;
+  message: string;
+  artifact_refs: string[];
+  manifest_path?: string;
+  summary_path?: string;
+  evidence_path?: string;
+  cleanup_report_path?: string;
+  source_model_path?: string;
+  cleaned_model_path?: string;
+  remeshed_model_path?: string;
+  progress_events: RunnerProgressEvent[];
+  warnings: string[];
+  command_logs: RunnerCommandLog[];
+}
+
+export interface StartMeshCleanupRunInput {
+  projectId: string;
+  sceneId: string;
+  assetKind: 'character' | 'object';
+  assetId: string;
+  sourceModelPath: string;
+  mode?: 'auto' | 'debug';
   notes?: string;
   requestedBy?: string;
   channel?: string;

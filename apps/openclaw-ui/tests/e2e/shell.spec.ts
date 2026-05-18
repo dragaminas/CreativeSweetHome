@@ -672,3 +672,57 @@ test.describe('phase20-asset-3d', () => {
     expect(updatedAsset?.stageState).toBe('ready');
   });
 });
+
+test.describe('phase21-mesh-cleanup', () => {
+  test('shows the cleanup panel and reports actionable diagnostics when no source model is available', async ({
+    page,
+    request
+  }) => {
+    const uniqueSuffix = Date.now();
+    const projectId = `phase21-proof-${uniqueSuffix}`;
+    const sceneId = 'mesh-cleanup-scene';
+    const shotId = 'sh010';
+    const assetLabel = `NoraCleanup-${uniqueSuffix}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: assetLabel,
+        description: 'Personaje base para probar cleanup de meshes.'
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+
+    const setReadyResponse = await request.post('/api/assets', {
+      data: {
+        action: 'update',
+        projectId,
+        sceneId,
+        kind: 'character',
+        assetId: createAssetPayload.assetId,
+        stage: 'model_3d',
+        stageState: 'ready'
+      }
+    });
+    expect(setReadyResponse.ok()).toBeTruthy();
+
+    await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+
+    await expect(page.getByTestId('mesh-cleanup-asset-id')).toBeVisible();
+    await page.getByTestId('mesh-cleanup-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('mesh-cleanup-mode').selectOption('auto');
+    await page.getByTestId('mesh-cleanup-source-model-path').fill('');
+    await page.getByTestId('mesh-cleanup-submit').click();
+
+    await expect(page.getByTestId('mesh-cleanup-error')).toContainText('source_model_path');
+  });
+});

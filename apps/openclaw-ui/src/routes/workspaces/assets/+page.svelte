@@ -4,6 +4,8 @@
     Asset3dRunSummary,
     AssetReferenceRunSummary,
     DirectoryStatus,
+    MeshCleanupRunSummary,
+    RunnerCommandLog,
     RunnerProgressEvent,
     RunnerTargetRecord
   } from '$lib/types/product';
@@ -34,6 +36,7 @@
 
   type ReferenceMode = 'import' | 'generate';
   type Model3dMode = 'import' | 'generate';
+  type MeshCleanupMode = 'auto' | 'debug';
 
   interface ReferenceWorkspaceResponse {
     accepted: boolean;
@@ -49,11 +52,21 @@
     run?: Asset3dRunSummary;
   }
 
+  interface MeshCleanupWorkspaceResponse {
+    accepted: boolean;
+    status: string;
+    message: string;
+    run?: MeshCleanupRunSummary;
+  }
+
   $: assetDirectories = selectAssetDirectories(data.studio.directories);
   $: assetCatalog = data.assetCatalog || { total: 0, assets: [] };
   $: readiness = data.assetReadiness || null;
   $: operateTargets = (data.referenceTargets || []) as RunnerTargetRecord[];
   $: availableAssets = (assetCatalog.assets || []) as AssetEntry[];
+  $: cleanupReadyAssets = availableAssets.filter(
+    (asset) => asset.stage === 'model_3d' && asset.stageState === 'ready'
+  );
 
   let selectedKind: AssetKind = 'character';
   let activeProjectId = data.projectId || 'default';
@@ -87,6 +100,14 @@
   let model3dSubmitting = false;
   let model3dRun: Asset3dRunSummary | null = null;
   let model3dError = '';
+
+  let cleanupAssetId = '';
+  let cleanupMode: MeshCleanupMode = 'auto';
+  let cleanupSourceModelPath = '';
+  let cleanupNotes = '';
+  let cleanupSubmitting = false;
+  let cleanupRun: MeshCleanupRunSummary | null = null;
+  let cleanupError = '';
 
   function selectAssetDirectories(directories: DirectoryStatus[]): DirectoryStatus[] {
     return directories.filter((directory) =>
@@ -226,7 +247,136 @@
     };
   }
 
-  function canCancel(run: AssetReferenceRunSummary | Asset3dRunSummary | null): boolean {
+  function normalizeCommandLogs(value: unknown): RunnerCommandLog[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .filter((entry): entry is Record<string, unknown> =>
+        Boolean(entry && typeof entry === 'object' && !Array.isArray(entry))
+      )
+      .map((entry) => ({
+        stage: typeof entry.stage === 'string' ? entry.stage : 'command',
+        command_text:
+          typeof entry.command_text === 'string'
+            ? entry.command_text
+            : Array.isArray(entry.command)
+              ? entry.command.join(' ')
+              : '',
+        stdout_log_path:
+          typeof entry.stdout_log_path === 'string' ? entry.stdout_log_path : undefined,
+        stderr_log_path:
+          typeof entry.stderr_log_path === 'string' ? entry.stderr_log_path : undefined,
+        exit_code: typeof entry.exit_code === 'number' ? entry.exit_code : undefined,
+        started_at: typeof entry.started_at === 'string' ? entry.started_at : undefined,
+        completed_at: typeof entry.completed_at === 'string' ? entry.completed_at : undefined
+      }));
+  }
+
+  function artifactRefMatching(artifactRefs: string[], pattern: RegExp): string | undefined {
+    return artifactRefs.find((artifactRef) => pattern.test(artifactRef));
+  }
+
+  function fallbackProgressFromCommandLogs(commandLogs: RunnerCommandLog[]): RunnerProgressEvent[] {
+    return commandLogs.map((commandLog) => ({
+      at: commandLog.completed_at || commandLog.started_at,
+      step_id: commandLog.stage,
+      state: commandLog.exit_code === 0 ? 'done' : 'failed',
+      message:
+        commandLog.exit_code === undefined
+          ? 'Comando ejecutado.'
+          : `Comando ejecutado con exit_code=${commandLog.exit_code}.`
+    }));
+  }
+
+  function normalizeMeshCleanupRun(payload: Record<string, unknown>): MeshCleanupRunSummary {
+    const metadata =
+      payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata)
+        ? (payload.metadata as Record<string, unknown>)
+        : {};
+
+    const artifactRefs = Array.isArray(payload.artifact_refs)
+      ? payload.artifact_refs.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    const commandLogs = normalizeCommandLogs(metadata.command_logs ?? payload.command_logs);
+    const metadataProgressEvents = Array.isArray(metadata.progress_events)
+      ? metadata.progress_events
+          .filter((entry): entry is Record<string, unknown> =>
+            Boolean(entry && typeof entry === 'object' && !Array.isArray(entry))
+          )
+          .map((entry) => ({
+            at: typeof entry.at === 'string' ? entry.at : undefined,
+            step_id: typeof entry.step_id === 'string' ? entry.step_id : 'unknown',
+            state: typeof entry.state === 'string' ? entry.state : 'unknown',
+            message: typeof entry.message === 'string' ? entry.message : ''
+          }))
+      : [];
+    const progressEvents =
+      metadataProgressEvents.length > 0
+        ? metadataProgressEvents
+        : fallbackProgressFromCommandLogs(commandLogs);
+
+    const warningsSource = Array.isArray(payload.warnings)
+      ? payload.warnings
+      : Array.isArray(metadata.warnings)
+        ? metadata.warnings
+        : [];
+    const warnings = warningsSource.filter((entry): entry is string => typeof entry === 'string');
+
+    return {
+      runner_id: typeof payload.runner_id === 'string' ? payload.runner_id : 'blender',
+      operation_kind: typeof payload.operation_kind === 'string' ? payload.operation_kind : 'operate',
+      target_id:
+        typeof payload.target_id === 'string' ? payload.target_id : 'cleanup_pre_rig_humanoid',
+      run_id: typeof payload.run_id === 'string' ? payload.run_id : '',
+      accepted: typeof payload.accepted === 'boolean' ? payload.accepted : true,
+      status: typeof payload.status === 'string' ? payload.status : 'fail_runtime',
+      message: typeof payload.message === 'string' ? payload.message : '',
+      artifact_refs: artifactRefs,
+      manifest_path: typeof payload.manifest_path === 'string' ? payload.manifest_path : undefined,
+      summary_path: typeof payload.summary_path === 'string' ? payload.summary_path : undefined,
+      evidence_path: typeof payload.evidence_path === 'string' ? payload.evidence_path : undefined,
+      cleanup_report_path:
+        typeof payload.cleanup_report_path === 'string'
+          ? payload.cleanup_report_path
+          : typeof payload.evidence_path === 'string'
+            ? payload.evidence_path
+            : artifactRefMatching(artifactRefs, /cleanup-report\\.md$/i),
+      source_model_path:
+        typeof payload.source_model_path === 'string'
+          ? payload.source_model_path
+          : artifactRefMatching(artifactRefs, /__source__.*\\.(glb|gltf|fbx|obj|ply|stl)$/i),
+      cleaned_model_path:
+        typeof payload.cleaned_model_path === 'string'
+          ? payload.cleaned_model_path
+          : artifactRefMatching(artifactRefs, /__cleaned__.*\\.(glb|gltf|fbx|obj|ply|stl)$/i),
+      remeshed_model_path:
+        typeof payload.remeshed_model_path === 'string'
+          ? payload.remeshed_model_path
+          : artifactRefMatching(artifactRefs, /__remeshed__.*\\.(glb|gltf|fbx|obj|ply|stl)$/i),
+      progress_events: progressEvents,
+      warnings,
+      command_logs: commandLogs
+    };
+  }
+
+  function cleanupReadiness(status: string): { label: string; tone: string } {
+    if (status === 'pass' || status === 'soft_pass_with_fallback') {
+      return { label: 'Listo para rigging', tone: 'positive' };
+    }
+    if (status === 'running' || status === 'queued') {
+      return { label: 'Cleanup en progreso', tone: 'info' };
+    }
+    if (status === 'cancelled') {
+      return { label: 'Cleanup cancelado', tone: 'muted' };
+    }
+    return { label: 'Bloqueado para rigging', tone: 'warning' };
+  }
+
+  function canCancel(
+    run: AssetReferenceRunSummary | Asset3dRunSummary | MeshCleanupRunSummary | null
+  ): boolean {
     return Boolean(run && (run.status === 'running' || run.status === 'queued'));
   }
 
@@ -543,6 +693,93 @@
     }
   }
 
+  async function handleMeshCleanupSubmit() {
+    cleanupError = '';
+
+    if (!cleanupAssetId) {
+      cleanupError = 'Selecciona un asset con candidato 3D listo para cleanup.';
+      return;
+    }
+
+    cleanupSubmitting = true;
+
+    try {
+      const response = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mesh_cleanup',
+          projectId: activeProjectId,
+          sceneId: activeSceneId,
+          kind: selectedKind,
+          assetId: cleanupAssetId,
+          mode: cleanupMode,
+          sourceModelPath: cleanupSourceModelPath,
+          notes: cleanupNotes
+        })
+      });
+
+      const result = (await response.json()) as MeshCleanupWorkspaceResponse;
+      if (!result.accepted || !result.run) {
+        cleanupError = result.message || 'No se pudo completar la corrida de cleanup.';
+        return;
+      }
+
+      cleanupRun = result.run;
+      message = result.message;
+      messageType =
+        result.status === 'pass' || result.status === 'soft_pass_with_fallback'
+          ? 'success'
+          : 'error';
+
+      await loadCatalog();
+      await loadReadiness();
+    } catch (error) {
+      cleanupError =
+        error instanceof Error
+          ? `No se pudo enviar la corrida de cleanup: ${error.message}`
+          : 'No se pudo enviar la corrida de cleanup.';
+    } finally {
+      cleanupSubmitting = false;
+    }
+  }
+
+  async function refreshCleanupStatus() {
+    if (!cleanupRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/blender/${cleanupRun.run_id}`);
+      const payload = (await response.json()) as Record<string, unknown>;
+      cleanupRun = normalizeMeshCleanupRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
+  async function cancelCleanupRun() {
+    if (!cleanupRun?.run_id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/runs/blender/${cleanupRun.run_id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requested_by: 'openclaw-ui',
+          channel: 'web-ui'
+        })
+      });
+
+      const payload = (await response.json()) as Record<string, unknown>;
+      cleanupRun = normalizeMeshCleanupRun(payload);
+    } catch {
+      // no-op
+    }
+  }
+
   async function loadCatalog() {
     try {
       const response = await fetch(
@@ -574,6 +811,17 @@
 
   $: if (availableAssets.length > 0 && !availableAssets.some((asset) => asset.assetId === model3dAssetId)) {
     model3dAssetId = availableAssets[0].assetId;
+  }
+
+  $: if (
+    cleanupReadyAssets.length > 0 &&
+    !cleanupReadyAssets.some((asset) => asset.assetId === cleanupAssetId)
+  ) {
+    cleanupAssetId = cleanupReadyAssets[0].assetId;
+  }
+
+  $: if (cleanupReadyAssets.length === 0) {
+    cleanupAssetId = '';
   }
 
   $: activeProjectId = data.projectId || 'default';
@@ -1026,6 +1274,201 @@
               {#each model3dRun.progress_events as event}
                 <li>
                   <code>{event.step_id}</code> · {event.state} · {event.message}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </section>
+
+  <section class="panel fade-in">
+    <h3>Cleanup pre-rig de meshes (Blender + Instant Meshes)</h3>
+    <p class="muted">
+      Reutiliza el target canónico <code>cleanup_pre_rig_humanoid</code> para dejar el asset listo para rigging
+      con evidencia before/after, reporte y diagnóstico legible.
+    </p>
+
+    <div class="asset-form">
+      <div class="form-row">
+        <label>
+          Asset listo para cleanup:
+          <select bind:value={cleanupAssetId} data-testid="mesh-cleanup-asset-id">
+            {#if cleanupReadyAssets.length === 0}
+              <option value="">No hay assets en stage model_3d/ready</option>
+            {:else}
+              {#each cleanupReadyAssets as asset}
+                <option value={asset.assetId}>{asset.label} ({asset.assetId})</option>
+              {/each}
+            {/if}
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Modo:
+          <select bind:value={cleanupMode} data-testid="mesh-cleanup-mode">
+            <option value="auto">auto (recomendado)</option>
+            <option value="debug">debug (diagnóstico)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          source_model_path (opcional):
+          <input
+            type="text"
+            bind:value={cleanupSourceModelPath}
+            placeholder="Vacío = autodetección desde Assets3D/<project>/<asset>/..."
+            data-testid="mesh-cleanup-source-model-path"
+          />
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Notas operativas:
+          <input
+            type="text"
+            bind:value={cleanupNotes}
+            placeholder="Opcional: contexto extra para la corrida de cleanup"
+          />
+        </label>
+      </div>
+
+      <div class="row-actions">
+        <button
+          on:click={handleMeshCleanupSubmit}
+          disabled={cleanupSubmitting || !cleanupAssetId}
+          data-testid="mesh-cleanup-submit"
+        >
+          {cleanupSubmitting ? 'Procesando...' : 'Ejecutar cleanup'}
+        </button>
+        <button on:click={refreshCleanupStatus} disabled={!cleanupRun?.run_id} data-testid="mesh-cleanup-refresh">
+          Refrescar estado
+        </button>
+        <button
+          on:click={cancelCleanupRun}
+          disabled={!canCancel(cleanupRun)}
+          data-testid="mesh-cleanup-cancel"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      {#if cleanupError}
+        <p class="error-inline" data-testid="mesh-cleanup-error">{cleanupError}</p>
+      {/if}
+    </div>
+
+    {#if cleanupRun}
+      <div class="reference-run-results">
+        <div class="inline-meta">
+          <span class="badge tone-{runStatusTone(cleanupRun.status)}" data-testid="mesh-cleanup-run-status">
+            {cleanupRun.status}
+          </span>
+          <span class="code-chip">{cleanupRun.run_id}</span>
+          <span class="code-chip">{cleanupRun.target_id}</span>
+        </div>
+
+        <p data-testid="mesh-cleanup-run-message">{cleanupRun.message}</p>
+
+        <p>
+          <strong>Readiness para rigging:</strong>
+          <span
+            class="badge tone-{cleanupReadiness(cleanupRun.status).tone}"
+            data-testid="mesh-cleanup-rig-readiness"
+          >
+            {cleanupReadiness(cleanupRun.status).label}
+          </span>
+        </p>
+
+        <p>
+          <strong>Evidencia:</strong>
+          <code data-testid="mesh-cleanup-evidence-path">{cleanupRun.evidence_path || 'sin evidencia aún'}</code>
+        </p>
+
+        <p>
+          <strong>Resumen:</strong>
+          <code data-testid="mesh-cleanup-summary-path">{cleanupRun.summary_path || 'sin resumen aún'}</code>
+        </p>
+
+        <p>
+          <strong>Cleanup report:</strong>
+          <code data-testid="mesh-cleanup-report-path">{cleanupRun.cleanup_report_path || 'sin reporte aún'}</code>
+        </p>
+
+        <p>
+          <strong>Before:</strong>
+          <code data-testid="mesh-cleanup-before-path">{cleanupRun.source_model_path || 'sin modelo fuente detectado'}</code>
+        </p>
+
+        <p>
+          <strong>After (cleaned):</strong>
+          <code data-testid="mesh-cleanup-cleaned-path">{cleanupRun.cleaned_model_path || 'sin cleaned output detectado'}</code>
+        </p>
+
+        <p>
+          <strong>After (remeshed):</strong>
+          <code data-testid="mesh-cleanup-remeshed-path">{cleanupRun.remeshed_model_path || 'sin remesh output detectado'}</code>
+        </p>
+
+        <div data-testid="mesh-cleanup-artifacts">
+          <strong>Artefactos:</strong>
+          {#if cleanupRun.artifact_refs.length === 0}
+            <p class="muted">Sin artefactos publicados.</p>
+          {:else}
+            <ul class="list artifact-list">
+              {#each cleanupRun.artifact_refs as artifact}
+                <li><code>{artifact}</code></li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div data-testid="mesh-cleanup-checkpoints">
+          <strong>Checkpoints:</strong>
+          {#if cleanupRun.progress_events.length === 0}
+            <p class="muted">Sin checkpoints reportados por el runner.</p>
+          {:else}
+            <ul class="list progress-list">
+              {#each cleanupRun.progress_events as event}
+                <li>
+                  <code>{event.step_id}</code> · {event.state} · {event.message}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div data-testid="mesh-cleanup-warnings">
+          <strong>Warnings:</strong>
+          {#if cleanupRun.warnings.length === 0}
+            <p class="muted">Sin warnings.</p>
+          {:else}
+            <ul class="list">
+              {#each cleanupRun.warnings as warning}
+                <li>{warning}</li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div data-testid="mesh-cleanup-diagnostics">
+          <strong>Diagnóstico backend:</strong>
+          {#if cleanupRun.command_logs.length === 0}
+            <p class="muted">Sin comandos reportados aún.</p>
+          {:else}
+            <ul class="list">
+              {#each cleanupRun.command_logs as commandLog}
+                <li>
+                  <code>{commandLog.stage}</code> · exit_code {commandLog.exit_code ?? 'n/a'}
+                  {#if commandLog.stderr_log_path}
+                    <div><code>{commandLog.stderr_log_path}</code></div>
+                  {/if}
                 </li>
               {/each}
             </ul>

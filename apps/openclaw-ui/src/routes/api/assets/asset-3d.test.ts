@@ -8,7 +8,8 @@ const { startAsset3dRunMock } = vi.hoisted(() => ({ startAsset3dRunMock: vi.fn()
 
 vi.mock('$lib/server/runner-bridge', () => ({
   startAssetReferenceRun: vi.fn(),
-  startAsset3dRun: startAsset3dRunMock
+  startAsset3dRun: startAsset3dRunMock,
+  startMeshCleanupRun: vi.fn()
 }));
 
 import { GET, POST } from './+server';

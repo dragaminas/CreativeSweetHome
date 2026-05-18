@@ -712,7 +712,7 @@ crear otro pipeline 3D paralelo. Los resultados deben publicarse bajo
 ## Phase 21: Cleanup automatizado de meshes en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Consumir la fase `13` desde la UI como un paso guiado y visible para personas
@@ -735,9 +735,9 @@ runner paralelo.
 
 ### Open Tasks
 - [`21.1`](tasks/21.1-ui-mesh-cleanup-integration.md): integrar en la UI el
-  runner de cleanup de la fase `13`
+  runner de cleanup de la fase `13` — `done`
 - [`21.2`](tasks/21.2-phase21-e2e-proof.md): probar una corrida real de
-  cleanup desde la UI hasta evidencia publicada
+  cleanup desde la UI hasta evidencia publicada — `pending`
 
 ## Phase 22: Rigging automatizado de assets en UI
 
