@@ -624,6 +624,7 @@ test.describe('phase20-asset-3d', () => {
     await page.getByTestId('asset-3d-asset-id').selectOption(createAssetPayload.assetId);
     await page.getByTestId('asset-3d-mode').selectOption('import');
     await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
+    await expect(page.getByTestId('asset-3d-source-model-path')).toHaveValue(sourceModelPath);
     await page.getByTestId('asset-3d-submit').click();
 
     await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
@@ -674,10 +675,12 @@ test.describe('phase20-asset-3d', () => {
 });
 
 test.describe('phase21-mesh-cleanup', () => {
-  test('shows the cleanup panel and reports actionable diagnostics when no source model is available', async ({
+  test('runs cleanup from the assets workspace and persists canonical cleanup evidence', async ({
     page,
     request
   }) => {
+    test.setTimeout(180_000);
+
     const uniqueSuffix = Date.now();
     const projectId = `phase21-proof-${uniqueSuffix}`;
     const sceneId = 'mesh-cleanup-scene';
@@ -702,20 +705,49 @@ test.describe('phase21-mesh-cleanup', () => {
     };
     expect(createAssetPayload.accepted).toBe(true);
 
-    const setReadyResponse = await request.post('/api/assets', {
-      data: {
-        action: 'update',
-        projectId,
-        sceneId,
-        kind: 'character',
-        assetId: createAssetPayload.assetId,
-        stage: 'model_3d',
-        stageState: 'ready'
-      }
-    });
-    expect(setReadyResponse.ok()).toBeTruthy();
+    const tempModelsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-phase21-models-'));
+    const sourceModelPath = path.join(tempModelsDir, 'candidate-source.obj');
+    await fs.writeFile(
+      sourceModelPath,
+      ['o Triangle', 'v 0.0 0.0 0.0', 'v 1.0 0.0 0.0', 'v 0.0 1.0 0.0', 'f 1 2 3'].join('\n'),
+      'utf8'
+    );
+
+    const expectedCandidatePath = path.join(
+      STUDIO_DIR,
+      'Assets3D',
+      projectId,
+      createAssetPayload.assetId,
+      'comfyui',
+      'output',
+      `${createAssetPayload.assetId}__mesh_candidate__v001.obj`
+    );
 
     await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+
+    await page.getByTestId('asset-3d-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('asset-3d-mode').selectOption('import');
+    await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
+    await expect(page.getByTestId('asset-3d-source-model-path')).toHaveValue(sourceModelPath);
+    await page.getByTestId('asset-3d-submit').click();
+
+    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
+      timeout: 20_000
+    });
+    await expect(page.getByTestId('asset-3d-artifacts')).toContainText(
+      `${createAssetPayload.assetId}__mesh_candidate__v001.obj`
+    );
+
+    await expect
+      .poll(async () => {
+        try {
+          await fs.access(expectedCandidatePath);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(true);
 
     await expect(page.getByTestId('mesh-cleanup-asset-id')).toBeVisible();
     await page.getByTestId('mesh-cleanup-asset-id').selectOption(createAssetPayload.assetId);
@@ -723,6 +755,49 @@ test.describe('phase21-mesh-cleanup', () => {
     await page.getByTestId('mesh-cleanup-source-model-path').fill('');
     await page.getByTestId('mesh-cleanup-submit').click();
 
-    await expect(page.getByTestId('mesh-cleanup-error')).toContainText('source_model_path');
+    await expect(page.getByTestId('mesh-cleanup-run-status')).toContainText(
+      /^(pass|soft_pass_with_fallback)$/,
+      {
+        timeout: 120_000
+      }
+    );
+    await expect(page.getByTestId('mesh-cleanup-run-message')).toContainText(
+      'Cleanup pre-rig completado'
+    );
+    await expect(page.getByTestId('mesh-cleanup-rig-readiness')).toContainText('Listo para rigging');
+    await expect(page.getByTestId('mesh-cleanup-evidence-path')).toContainText(
+      `/Assets3D/${projectId}/${createAssetPayload.assetId}/cleanup/`
+    );
+    await expect(page.getByTestId('mesh-cleanup-summary-path')).toContainText('/manifests/summary.json');
+    await expect(page.getByTestId('mesh-cleanup-report-path')).toContainText('/cleanup-report.md');
+    await expect(page.getByTestId('mesh-cleanup-before-path')).toContainText('__source__v001');
+    await expect(page.getByTestId('mesh-cleanup-cleaned-path')).toContainText('__cleaned__v001');
+
+    const remeshedPathText = (await page.getByTestId('mesh-cleanup-remeshed-path').textContent()) || '';
+    expect(remeshedPathText).toMatch(/__remeshed__v001|sin remesh output detectado/);
+
+    const summaryPath = ((await page.getByTestId('mesh-cleanup-summary-path').textContent()) || '').trim();
+    const reportPath = ((await page.getByTestId('mesh-cleanup-report-path').textContent()) || '').trim();
+    const beforePath = ((await page.getByTestId('mesh-cleanup-before-path').textContent()) || '').trim();
+    const cleanedPath = ((await page.getByTestId('mesh-cleanup-cleaned-path').textContent()) || '').trim();
+    await expect(fs.access(summaryPath)).resolves.toBeUndefined();
+    await expect(fs.access(reportPath)).resolves.toBeUndefined();
+    await expect(fs.access(beforePath)).resolves.toBeUndefined();
+    await expect(fs.access(cleanedPath)).resolves.toBeUndefined();
+
+    if (remeshedPathText.includes('/')) {
+      await expect(fs.access(remeshedPathText.trim())).resolves.toBeUndefined();
+    }
+
+    const listResponse = await request.get(
+      `/api/assets?projectId=${projectId}&sceneId=${sceneId}&kind=character`
+    );
+    expect(listResponse.ok()).toBeTruthy();
+    const listPayload = (await listResponse.json()) as {
+      assets: Array<{ assetId: string; stage: string; stageState: string }>;
+    };
+    const updatedAsset = listPayload.assets.find((entry) => entry.assetId === createAssetPayload.assetId);
+    expect(updatedAsset?.stage).toBe('model_3d');
+    expect(updatedAsset?.stageState).toBe('ready');
   });
 });
