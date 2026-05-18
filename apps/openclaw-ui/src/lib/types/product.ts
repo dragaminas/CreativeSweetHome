@@ -314,6 +314,40 @@ export interface StartMeshCleanupRunInput {
   channel?: string;
 }
 
+export interface RiggingRunSummary {
+  runner_id: string;
+  operation_kind: string;
+  target_id: string;
+  run_id: string;
+  accepted: boolean;
+  status: RunnerExecutionStatus;
+  message: string;
+  artifact_refs: string[];
+  manifest_path?: string;
+  summary_path?: string;
+  evidence_path?: string;
+  rigging_report_path?: string;
+  prepared_model_path?: string;
+  rigged_glb_path?: string;
+  rigged_fbx_path?: string;
+  validation_artifact_paths: string[];
+  progress_events: RunnerProgressEvent[];
+  warnings: string[];
+  command_logs: RunnerCommandLog[];
+}
+
+export interface StartRiggingRunInput {
+  projectId: string;
+  sceneId: string;
+  assetKind: 'character' | 'object';
+  assetId: string;
+  preparedModelPath: string;
+  mode?: 'auto' | 'debug';
+  notes?: string;
+  requestedBy?: string;
+  channel?: string;
+}
+
 export interface EmbedWorkspaceSeam {
   workspaceId: string;
   sameOriginPath: ProductRoute;

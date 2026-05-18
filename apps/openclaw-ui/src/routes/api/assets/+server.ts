@@ -12,7 +12,8 @@ import { resolveRepoContext } from '$lib/server/env';
 import {
   startAsset3dRun,
   startAssetReferenceRun,
-  startMeshCleanupRun
+  startMeshCleanupRun,
+  startRiggingRun
 } from '$lib/server/runner-bridge';
 import {
   listAssets,
@@ -131,6 +132,79 @@ async function resolveMeshCleanupSourceModelPath(
           filePath,
           mtimeMs: stats.mtimeMs,
           score: entry.name.includes('mesh_candidate') ? 2 : 1
+        });
+      } catch {
+        // ignore stale files
+      }
+    }
+  }
+
+  if (discovered.length === 0) {
+    return null;
+  }
+
+  discovered.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return b.mtimeMs - a.mtimeMs;
+  });
+
+  return discovered[0]?.filePath || null;
+}
+
+async function resolveRiggingPreparedModelPath(
+  projectId: string,
+  assetId: string
+): Promise<string | null> {
+  const context = resolveRepoContext();
+  const cleanupRoot = path.join(context.assets3dDir, projectId, assetId, 'cleanup');
+  const supportedExtensions = new Set(['.fbx', '.glb', '.gltf', '.obj', '.ply', '.stl']);
+  const discovered: Array<{ filePath: string; mtimeMs: number; score: number }> = [];
+
+  let runEntries: Dirent[] = [];
+  try {
+    runEntries = await fs.readdir(cleanupRoot, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  for (const runEntry of runEntries) {
+    if (!runEntry.isDirectory()) {
+      continue;
+    }
+
+    const outputDir = path.join(cleanupRoot, runEntry.name, 'output');
+    let outputEntries: Dirent[] = [];
+    try {
+      outputEntries = await fs.readdir(outputDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const outputEntry of outputEntries) {
+      if (!outputEntry.isFile()) {
+        continue;
+      }
+
+      const extension = path.extname(outputEntry.name).toLowerCase();
+      if (!supportedExtensions.has(extension)) {
+        continue;
+      }
+
+      const filePath = path.join(outputDir, outputEntry.name);
+      try {
+        const stats = await fs.stat(filePath);
+        const lowerName = outputEntry.name.toLowerCase();
+        const score = lowerName.includes('__remeshed__')
+          ? 3
+          : lowerName.includes('__cleaned__')
+            ? 2
+            : 1;
+        discovered.push({
+          filePath,
+          mtimeMs: stats.mtimeMs,
+          score
         });
       } catch {
         // ignore stale files
@@ -662,6 +736,99 @@ export const POST: RequestHandler = async ({ request }) => {
       );
     }
 
+    if (action === 'create_rig_humanoid') {
+      const assetId = asString(body.assetId || '');
+      if (!assetId) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'assetId es obligatorio para ejecutar rigging humanoide.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const mode = parseCleanupMode(body.mode);
+      if (!mode) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message: 'mode debe ser "auto" o "debug".'
+          },
+          { status: 400 }
+        );
+      }
+
+      const catalog = await listAssets({
+        projectId,
+        sceneId,
+        kind
+      });
+      const asset = catalog.assets.find((entry) => entry.assetId === assetId);
+      if (!asset) {
+        return json(
+          {
+            accepted: false,
+            status: 'not_found',
+            message: `No se encontro el asset ${assetId} en el catalogo ${kind}.`
+          },
+          { status: 404 }
+        );
+      }
+
+      const preparedModelPathInput = asString(body.preparedModelPath || body.prepared_model_path).trim();
+      const preparedModelPath =
+        preparedModelPathInput ||
+        (await resolveRiggingPreparedModelPath(catalog.projectId, asset.assetId));
+      if (!preparedModelPath) {
+        return json(
+          {
+            accepted: false,
+            status: 'fail_compile',
+            message:
+              'prepared_model_path es obligatorio para rigging. Ejecuta cleanup pre-rig o especifica la ruta manual.'
+          },
+          { status: 400 }
+        );
+      }
+
+      const run = await startRiggingRun({
+        projectId: catalog.projectId,
+        sceneId: catalog.sceneId,
+        assetKind: kind,
+        assetId: asset.assetId,
+        preparedModelPath,
+        mode,
+        notes: asString(body.notes)
+      });
+
+      const updated = await updateAsset({
+        projectId: catalog.projectId,
+        sceneId: catalog.sceneId,
+        kind,
+        assetId: asset.assetId,
+        stage: 'model_3d',
+        stageState: mapRunStatusToAssetStageState(run.status, {
+          softPassAsReady: true
+        })
+      });
+
+      return json(
+        {
+          accepted: run.accepted,
+          status: run.status,
+          message: run.message,
+          assetId: asset.assetId,
+          asset: updated.asset,
+          manifestPath: updated.manifestPath,
+          run
+        },
+        { status: run.accepted ? 200 : 502 }
+      );
+    }
+
     return json(
       {
         accepted: false,
@@ -669,7 +836,7 @@ export const POST: RequestHandler = async ({ request }) => {
         message:
           `Acción "${action}" no soportada en POST. ` +
           'Usa "create", "update", "reference_import", "reference_generate", ' +
-          '"asset_3d_import", "asset_3d_generate" o "mesh_cleanup".'
+          '"asset_3d_import", "asset_3d_generate", "mesh_cleanup" o "create_rig_humanoid".'
       },
       { status: 400 }
     );

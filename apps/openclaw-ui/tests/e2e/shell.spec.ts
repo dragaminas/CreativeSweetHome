@@ -801,3 +801,97 @@ test.describe('phase21-mesh-cleanup', () => {
     expect(updatedAsset?.stageState).toBe('ready');
   });
 });
+
+test.describe('phase22-rigging', () => {
+  test('runs humanoid rigging from the assets workspace and exposes canonical rigging evidence', async ({
+    page,
+    request
+  }) => {
+    test.setTimeout(180_000);
+
+    const uniqueSuffix = Date.now();
+    const projectId = `phase22-proof-${uniqueSuffix}`;
+    const sceneId = 'rigging-scene';
+    const shotId = 'sh010';
+    const assetLabel = `NoraRig-${uniqueSuffix}`;
+    await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: assetLabel,
+        description: 'Personaje base para probar rigging automatizado.'
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+
+    const tempModelsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'openclaw-phase22-models-'));
+    const sourceModelPath = path.join(tempModelsDir, 'candidate-source.obj');
+    await fs.writeFile(
+      sourceModelPath,
+      ['o Triangle', 'v 0.0 0.0 0.0', 'v 1.0 0.0 0.0', 'v 0.0 1.0 0.0', 'f 1 2 3'].join('\n'),
+      'utf8'
+    );
+
+    await page.goto(`/workspaces/assets?projectId=${projectId}&sceneId=${sceneId}`);
+
+    await page.getByTestId('asset-3d-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('asset-3d-mode').selectOption('import');
+    await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
+    await page.getByTestId('asset-3d-submit').click();
+    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
+      timeout: 20_000
+    });
+
+    await page.getByTestId('mesh-cleanup-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('mesh-cleanup-mode').selectOption('auto');
+    await page.getByTestId('mesh-cleanup-source-model-path').fill('');
+    await page.getByTestId('mesh-cleanup-submit').click();
+    await expect(page.getByTestId('mesh-cleanup-run-status')).toContainText(
+      /^(pass|soft_pass_with_fallback)$/,
+      {
+        timeout: 120_000
+      }
+    );
+
+    await expect(page.getByTestId('rigging-asset-id')).toBeVisible();
+    await page.getByTestId('rigging-asset-id').selectOption(createAssetPayload.assetId);
+    await page.getByTestId('rigging-mode').selectOption('auto');
+    await page.getByTestId('rigging-prepared-model-path').fill('');
+    await page.getByTestId('rigging-submit').click();
+
+    await expect(page.getByTestId('rigging-run-status')).toContainText(
+      /^(pass|soft_pass_with_fallback|fail_quality)$/,
+      { timeout: 120_000 }
+    );
+    await expect(page.getByTestId('rigging-run-message')).not.toHaveText('');
+    await expect(page.getByTestId('rigging-outcome-label')).toContainText(
+      /Rig humanoide listo|Rig utilizable con alertas|Modelo no apto para rigging humanoide/
+    );
+    await expect(page.getByTestId('rigging-evidence-path')).toContainText(
+      `/Assets3D/${projectId}/${createAssetPayload.assetId}/rigging/`
+    );
+    await expect(page.getByTestId('rigging-summary-path')).toContainText('/manifests/summary.json');
+    await expect(page.getByTestId('rigging-report-path')).toContainText('/rigging-report.md');
+    await expect(page.getByTestId('rigging-rigged-glb-path')).toContainText('__rigged__v001.glb');
+    await expect(page.getByTestId('rigging-rigged-fbx-path')).toContainText('__rigged__v001.fbx');
+
+    const summaryPath = ((await page.getByTestId('rigging-summary-path').textContent()) || '').trim();
+    const reportPath = ((await page.getByTestId('rigging-report-path').textContent()) || '').trim();
+    const riggedGlbPath = ((await page.getByTestId('rigging-rigged-glb-path').textContent()) || '').trim();
+    const riggedFbxPath = ((await page.getByTestId('rigging-rigged-fbx-path').textContent()) || '').trim();
+
+    await expect(fs.access(summaryPath)).resolves.toBeUndefined();
+    await expect(fs.access(reportPath)).resolves.toBeUndefined();
+    await expect(fs.access(riggedGlbPath)).resolves.toBeUndefined();
+    await expect(fs.access(riggedFbxPath)).resolves.toBeUndefined();
+  });
+});

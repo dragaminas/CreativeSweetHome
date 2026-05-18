@@ -5,12 +5,14 @@ import type {
   Asset3dRunSummary,
   AssetReferenceRunSummary,
   MeshCleanupRunSummary,
+  RiggingRunSummary,
   RunnerCatalog,
   RunnerCommandLog,
   RunnerDescriptionRecord,
   RunnerProgressEvent,
   RunnerTargetRecord,
   StartAsset3dRunInput,
+  StartRiggingRunInput,
   StartMeshCleanupRunInput,
   StartAssetReferenceRunInput,
   StartRunPayload
@@ -143,6 +145,51 @@ function toMeshCleanupRunSummary(payload: Record<string, unknown>): MeshCleanupR
     source_model_path: artifactRefMatching(artifact_refs, /__source__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
     cleaned_model_path: artifactRefMatching(artifact_refs, /__cleaned__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
     remeshed_model_path: artifactRefMatching(artifact_refs, /__remeshed__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
+    progress_events,
+    warnings: asStringArray(metadata.warnings),
+    command_logs
+  };
+}
+
+function toRiggingRunSummary(payload: Record<string, unknown>): RiggingRunSummary {
+  const metadata = asRecord(payload.metadata);
+  const artifact_refs = asStringArray(payload.artifact_refs);
+  const command_logs = commandLogsFromMetadata(metadata.command_logs);
+  const metadataProgressEvents = progressEventsFromMetadata(metadata.progress_events);
+  const progress_events =
+    metadataProgressEvents.length > 0
+      ? metadataProgressEvents
+      : progressEventsFromCommandLogs(command_logs);
+
+  return {
+    runner_id: asString(payload.runner_id, 'blender'),
+    operation_kind: asString(payload.operation_kind, 'operate'),
+    target_id: asString(payload.target_id, 'create_rig_humanoid'),
+    run_id: asString(payload.run_id),
+    accepted: asBoolean(payload.accepted, true),
+    status: asString(payload.status),
+    message: asString(payload.message),
+    artifact_refs,
+    manifest_path: asString(payload.manifest_path) || undefined,
+    summary_path: asString(payload.summary_path) || undefined,
+    evidence_path: asString(payload.evidence_path) || undefined,
+    rigging_report_path:
+      asString(payload.rigging_report_path) ||
+      asString(payload.evidence_path) ||
+      artifactRefMatching(artifact_refs, /rigging-report\.md$/i),
+    prepared_model_path:
+      asString(payload.prepared_model_path) ||
+      asString(payload.source_model_path) ||
+      artifactRefMatching(artifact_refs, /__prepared__.*\.(glb|gltf|fbx|obj|ply|stl)$/i),
+    rigged_glb_path:
+      asString(payload.rigged_glb_path) ||
+      artifactRefMatching(artifact_refs, /__rigged__.*\.glb$/i),
+    rigged_fbx_path:
+      asString(payload.rigged_fbx_path) ||
+      artifactRefMatching(artifact_refs, /__rigged__.*\.fbx$/i),
+    validation_artifact_paths: artifact_refs.filter((artifactRef) =>
+      /\/validation\/.+\.(png|jpe?g|webp|gif|bmp)$/i.test(artifactRef)
+    ),
     progress_events,
     warnings: asStringArray(metadata.warnings),
     command_logs
@@ -366,6 +413,41 @@ export async function startMeshCleanupRun(
     return toMeshCleanupRunSummary(statusPayload);
   } catch {
     return toMeshCleanupRunSummary(response);
+  }
+}
+
+export async function startRiggingRun(
+  input: StartRiggingRunInput
+): Promise<RiggingRunSummary> {
+  const response = await startRun({
+    runner_id: 'blender',
+    operation_kind: 'operate',
+    target_id: 'create_rig_humanoid',
+    requested_by: input.requestedBy || 'openclaw-ui',
+    channel: input.channel || 'web-ui',
+    inputs: {
+      project_id: input.projectId,
+      scene_id: input.sceneId,
+      asset_kind: input.assetKind,
+      entity_id: input.assetId,
+      prepared_model_path: input.preparedModelPath,
+      notes: asString(input.notes)
+    },
+    options: {
+      mode: input.mode || 'auto'
+    }
+  });
+
+  const runId = asString(response.run_id);
+  if (!runId) {
+    return toRiggingRunSummary(response);
+  }
+
+  try {
+    const statusPayload = await getRunStatus('blender', runId);
+    return toRiggingRunSummary(statusPayload);
+  } catch {
+    return toRiggingRunSummary(response);
   }
 }
 

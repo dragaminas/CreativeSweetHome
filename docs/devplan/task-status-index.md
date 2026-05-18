@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `76`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `28`
-- `pending`: `37`
+- `done`: `29`
+- `pending`: `36`
 
 ## Tasks
 
@@ -57,7 +57,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `20.2` Prueba end-to-end de Phase 20 | `20` Importacion o modelado 3D de assets en UI | `done` | [docs/devplan/tasks/20.2-phase20-e2e-proof.md](docs/devplan/tasks/20.2-phase20-e2e-proof.md) |
 | `21.1` Integracion UI del cleanup de meshes | `21` Cleanup automatizado de meshes en UI | `done` | [docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md](docs/devplan/tasks/21.1-ui-mesh-cleanup-integration.md) |
 | `21.2` Prueba end-to-end de Phase 21 | `21` Cleanup automatizado de meshes en UI | `done` | [docs/devplan/tasks/21.2-phase21-e2e-proof.md](docs/devplan/tasks/21.2-phase21-e2e-proof.md) |
-| `22.1` Integracion UI del rigging automatizado | `22` Rigging automatizado de assets en UI | `pending` | [docs/devplan/tasks/22.1-ui-rigging-integration.md](docs/devplan/tasks/22.1-ui-rigging-integration.md) |
+| `22.1` Integracion UI del rigging automatizado | `22` Rigging automatizado de assets en UI | `done` | [docs/devplan/tasks/22.1-ui-rigging-integration.md](docs/devplan/tasks/22.1-ui-rigging-integration.md) |
 | `22.2` Prueba end-to-end de Phase 22 | `22` Rigging automatizado de assets en UI | `pending` | [docs/devplan/tasks/22.2-phase22-e2e-proof.md](docs/devplan/tasks/22.2-phase22-e2e-proof.md) |
 | `23.1` Workspace UI de descripcion de tomas | `23` Descripcion de tomas en UI | `pending` | [docs/devplan/tasks/23.1-ui-shot-description-workspace.md](docs/devplan/tasks/23.1-ui-shot-description-workspace.md) |
 | `23.2` Prueba end-to-end de Phase 23 | `23` Descripcion de tomas en UI | `pending` | [docs/devplan/tasks/23.2-phase23-e2e-proof.md](docs/devplan/tasks/23.2-phase23-e2e-proof.md) |
