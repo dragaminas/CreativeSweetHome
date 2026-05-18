@@ -28,6 +28,35 @@ Referencias oficiales:
 | Config visible | `scripts/bootstrap/show-config.sh` |
 | Checkout local por defecto | `~/Kimodo/` |
 | Venv por defecto | `~/Kimodo/.venv/` |
+| Bridge backend de embed y contexto | `apps/openclaw-ui/src/lib/server/kimodo-embed.ts` |
+| Route same-origin de embed | `apps/openclaw-ui/src/routes/workspaces/kimodo/embed/+server.ts` |
+
+## Bridge backend de contexto (phase `24.0`)
+
+Para embeber `Kimodo` sin abrir un runner ni proxy paralelo, la app web ahora
+persiste un contexto canonico por `project/scene/shot/character` en:
+
+- `STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/manifests/kimodo-embed-context.json`
+- `STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/manifests/kimodo-animation-state.json`
+
+Y prepara el routing de salida de animacion bajo:
+
+- `STUDIO_DIR/Exports/<project>/<shot>/kimodo/input/`
+- `STUDIO_DIR/Exports/<project>/<shot>/kimodo/output/`
+- `STUDIO_DIR/Exports/<project>/<shot>/kimodo/logs/`
+
+Superficies backend reutilizables:
+
+- `POST /workspaces/kimodo/embed`: crea y persiste contexto canónico
+- `GET /workspaces/kimodo/embed?format=json&...`: devuelve el mismo payload para
+  handoff automatizado
+
+Campos minimos de contexto:
+
+- `projectId`
+- `sceneId`
+- `shotId`
+- `characterId`
 
 ## Capacidades del instalador automático
 

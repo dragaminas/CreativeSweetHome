@@ -78,6 +78,18 @@ export async function loadStudioState(): Promise<StudioState> {
         'Area local reservada para el engine y assets intermedios.'
       ),
       directoryStatus(
+        'kimodo-install',
+        'Kimodo',
+        context.kimodoDir,
+        'Instalacion local reutilizada para embed de animacion en phase 24.'
+      ),
+      directoryStatus(
+        'validation-kimodo',
+        'Validation/Kimodo',
+        path.join(context.studioDir, 'Validation', 'kimodo'),
+        'Evidencia canonica prevista para sesiones embebidas y handoff de animacion.'
+      ),
+      directoryStatus(
         'validation-comfyui',
         'Validation/ComfyUI',
         path.join(context.studioDir, 'Validation', 'comfyui'),

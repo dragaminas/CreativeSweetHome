@@ -315,6 +315,26 @@ Tambien deberia servir para:
 
 La implementacion concreta cambia; el contrato de ejecucion no.
 
+## Bridge backend de `Kimodo` (phase `24.0`)
+
+Para `Kimodo` embebido, el repo reutiliza la misma disciplina de trazabilidad
+sin introducir un runner paralelo:
+
+- seam backend: `apps/openclaw-ui/src/lib/server/kimodo-embed.ts`
+- route same-origin: `apps/openclaw-ui/src/routes/workspaces/kimodo/embed/+server.ts`
+- contexto canonico:
+  `STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/manifests/kimodo-embed-context.json`
+- estado inicial de handoff:
+  `STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/manifests/kimodo-animation-state.json`
+- output routing canonico:
+  `STUDIO_DIR/Exports/<project>/<shot>/kimodo/{input,output,logs}/`
+
+Estados minimos del bridge:
+
+- `ready`: contexto completo para embed y handoff
+- `needs_review`: contexto persistido, pero con prerequisitos faltantes
+  (`scene/shot brief/catalog`)
+
 ## No objetivos
 
 Este documento no define:
