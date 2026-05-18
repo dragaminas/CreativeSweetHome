@@ -742,7 +742,7 @@ runner paralelo.
 ## Phase 22: Rigging automatizado de assets en UI
 
 ### Status
-`pending`
+`active`
 
 ### Purpose
 Consumir la fase `14` desde la UI como una accion simple de `Create rig` con
@@ -764,9 +764,9 @@ estados, previews, warnings y evidencia del target canonico de rigging.
 
 ### Open Tasks
 - [`22.1`](tasks/22.1-ui-rigging-integration.md): integrar en la UI el futuro
-  target canonico de rigging humanoide
+  target canonico de rigging humanoide — `done`
 - [`22.2`](tasks/22.2-phase22-e2e-proof.md): probar una corrida real de
-  rigging desde la UI hasta evidencia revisable
+  rigging desde la UI hasta evidencia revisable — `done`
 
 ## Phase 23: Descripcion de tomas en UI
 

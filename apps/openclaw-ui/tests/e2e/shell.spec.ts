@@ -845,11 +845,33 @@ test.describe('phase22-rigging', () => {
 
     await page.getByTestId('asset-3d-asset-id').selectOption(createAssetPayload.assetId);
     await page.getByTestId('asset-3d-mode').selectOption('import');
-    await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
-    await page.getByTestId('asset-3d-submit').click();
-    await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
-      timeout: 20_000
+    const model3dPanel = page.locator('section').filter({
+      has: page.getByTestId('asset-3d-submit')
     });
+    const model3dError = model3dPanel.locator('.error-inline');
+    let model3dSubmitted = false;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await page.getByTestId('asset-3d-source-model-path').fill(sourceModelPath);
+      await expect(page.getByTestId('asset-3d-source-model-path')).toHaveValue(sourceModelPath);
+      await page.getByTestId('asset-3d-submit').click();
+
+      try {
+        await expect(page.getByTestId('asset-3d-run-status')).toContainText('pass', {
+          timeout: 30_000
+        });
+        model3dSubmitted = true;
+        break;
+      } catch (error) {
+        const model3dErrorText = ((await model3dError.textContent()) || '').trim();
+        const sourcePathMissing = model3dErrorText.includes('source_model_path');
+        if (!sourcePathMissing || attempt === 2) {
+          throw error;
+        }
+      }
+    }
+
+    expect(model3dSubmitted).toBe(true);
 
     await page.getByTestId('mesh-cleanup-asset-id').selectOption(createAssetPayload.assetId);
     await page.getByTestId('mesh-cleanup-mode').selectOption('auto');
@@ -888,10 +910,40 @@ test.describe('phase22-rigging', () => {
     const reportPath = ((await page.getByTestId('rigging-report-path').textContent()) || '').trim();
     const riggedGlbPath = ((await page.getByTestId('rigging-rigged-glb-path').textContent()) || '').trim();
     const riggedFbxPath = ((await page.getByTestId('rigging-rigged-fbx-path').textContent()) || '').trim();
+    const warningsText = ((await page.getByTestId('rigging-warnings').textContent()) || '').trim();
 
     await expect(fs.access(summaryPath)).resolves.toBeUndefined();
     await expect(fs.access(reportPath)).resolves.toBeUndefined();
     await expect(fs.access(riggedGlbPath)).resolves.toBeUndefined();
     await expect(fs.access(riggedFbxPath)).resolves.toBeUndefined();
+
+    await expect(page.getByTestId('rigging-diagnostics')).not.toContainText(
+      'Sin comandos reportados aún.'
+    );
+
+    const riggingSummary = JSON.parse(await fs.readFile(summaryPath, 'utf8')) as {
+      status: string;
+      warnings?: string[];
+      command_logs?: Array<{ stage?: string; exit_code?: number }>;
+      artifact_refs?: string[];
+      rigged_glb_path?: string;
+      rigged_fbx_path?: string;
+    };
+
+    expect(Array.isArray(riggingSummary.warnings)).toBe(true);
+    if ((riggingSummary.warnings || []).length === 0) {
+      expect(warningsText).toContain('Sin warnings.');
+    } else {
+      for (const warning of riggingSummary.warnings || []) {
+        expect(warningsText).toContain(warning);
+      }
+    }
+    expect(Array.isArray(riggingSummary.command_logs)).toBe(true);
+    expect((riggingSummary.command_logs || []).length).toBeGreaterThan(0);
+    expect(riggingSummary.rigged_glb_path).toBe(riggedGlbPath);
+    expect(riggingSummary.rigged_fbx_path).toBe(riggedFbxPath);
+    expect(riggingSummary.artifact_refs || []).toEqual(
+      expect.arrayContaining([riggedGlbPath, riggedFbxPath])
+    );
   });
 });

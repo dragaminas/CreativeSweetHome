@@ -229,6 +229,13 @@ de `21.2` desde UI (`asset-3d-import` + `mesh_cleanup`), valida autodeteccion
 de `source_model_path` y confirma evidencia canonica (`run/summary/report` +
 before/after refs) bajo `Assets3D/<project>/<asset>/cleanup/<run_id>/...`.
 
+La prueba browser-backed `phase22-rigging` ejecuta ahora la corrida real de
+`22.2` desde UI (`asset-3d-import` + `mesh_cleanup` + `create_rig_humanoid`)
+y valida evidencia canonica de rigging en disco (`summary/report`, outputs
+`__rigged__v001.glb/.fbx`, previews de validacion), incluyendo verificacion de
+warnings y diagnosticos (`command_logs`) publicados por el runner bajo
+`Assets3D/<project>/<asset>/rigging/<run_id>/...`.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 
