@@ -795,7 +795,7 @@ escena, de los assets y del pipeline, listos para animacion y composicion.
 - [`23.1`](tasks/23.1-ui-shot-description-workspace.md): implementar la
   captura guiada de tomas dentro del shell de producto — `done`
 - [`23.2`](tasks/23.2-phase23-e2e-proof.md): probar la creacion real de una
-  toma conectada a una escena y assets existentes
+  toma conectada a una escena y assets existentes — `done`
 
 ## Phase 24: Animacion de personajes en Kimodo embebido
 

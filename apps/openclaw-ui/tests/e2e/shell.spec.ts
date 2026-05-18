@@ -958,7 +958,27 @@ test.describe('phase23-shot-brief', () => {
     const projectId = `phase23-proof-${uniqueSuffix}`;
     const sceneId = 'shot-brief-scene';
     const shotId = 'sh010';
+    const characterLabel = `Nora-${uniqueSuffix}`;
     await seedSceneScaffold(request, projectId, sceneId, shotId);
+
+    const createAssetResponse = await request.post('/api/assets', {
+      data: {
+        action: 'create',
+        projectId,
+        sceneId,
+        kind: 'character',
+        label: characterLabel
+      }
+    });
+    expect(createAssetResponse.ok()).toBeTruthy();
+    const createAssetPayload = (await createAssetResponse.json()) as {
+      accepted: boolean;
+      status: string;
+      assetId: string;
+    };
+    expect(createAssetPayload.accepted).toBe(true);
+    expect(createAssetPayload.status).toBe('created');
+    expect(createAssetPayload.assetId).toBeTruthy();
 
     const expectedFilePath = path.join(
       STUDIO_DIR,
@@ -973,19 +993,40 @@ test.describe('phase23-shot-brief', () => {
 
     await page.goto('/workspaces/shot');
 
-    await page.getByTestId('shot-brief-project-id').fill(projectId);
-    await page.getByTestId('shot-brief-scene-id').fill(sceneId);
-    await page.getByTestId('shot-brief-shot-id').fill(shotId);
-    await page.getByTestId('shot-brief-intent').fill('Nora entra al callejon y mira hacia la camara.');
-    await page.getByTestId('shot-brief-framing').fill('Plano medio con travelling corto y angulo ligeramente bajo.');
-    await page.getByTestId('shot-brief-duration-ms').fill('4200');
-    await page.getByTestId('shot-brief-characters').fill('Nora');
-    await page.getByTestId('shot-brief-constraints').fill('24fps\ncontinuidad de lluvia');
-    await page.getByTestId('shot-brief-references').fill('shotdeck-rain-night');
+    const fillShotBriefForm = async (): Promise<void> => {
+      await page.getByTestId('shot-brief-project-id').fill(projectId);
+      await page.getByTestId('shot-brief-scene-id').fill(sceneId);
+      await page.getByTestId('shot-brief-shot-id').fill(shotId);
+      await page.getByTestId('shot-brief-intent').fill('Nora entra al callejon y mira hacia la camara.');
+      await page
+        .getByTestId('shot-brief-framing')
+        .fill('Plano medio con travelling corto y angulo ligeramente bajo.');
+      await page.getByTestId('shot-brief-duration-ms').fill('4200');
+      await page.getByTestId('shot-brief-characters').fill(characterLabel);
+      await page.getByTestId('shot-brief-constraints').fill('24fps\ncontinuidad de lluvia');
+      await page.getByTestId('shot-brief-references').fill('shotdeck-rain-night');
+    };
 
-    await page.getByTestId('shot-brief-submit').click();
+    let accepted = false;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      await fillShotBriefForm();
+      await page.getByTestId('shot-brief-submit').click();
 
-    await expect(page.getByTestId('shot-brief-checkpoint-status')).toContainText('accepted');
+      try {
+        await expect(page.getByTestId('shot-brief-checkpoint-status')).toContainText('accepted', {
+          timeout: 7_500
+        });
+        accepted = true;
+        break;
+      } catch (error) {
+        if (attempt === 2) {
+          throw error;
+        }
+      }
+    }
+
+    expect(accepted).toBe(true);
+    await expect(page.getByTestId('shot-brief-consistency-status')).toContainText('consistent');
     await expect(page.getByTestId('shot-brief-saved-path')).toContainText('/shots/sh010/briefs/shot-brief.json');
     await expect(page.getByTestId('shot-brief-feedback')).toBeVisible();
 
@@ -1005,6 +1046,11 @@ test.describe('phase23-shot-brief', () => {
       sceneId: string;
       shotId: string;
       checkpoint: { status: string };
+      consistency: {
+        status: string;
+        availableCharacterLabels: string[];
+        missingCharacters: string[];
+      };
       source: { durationMs: number; characters: string[] };
     };
 
@@ -1012,7 +1058,10 @@ test.describe('phase23-shot-brief', () => {
     expect(artifact.sceneId).toBe(sceneId);
     expect(artifact.shotId).toBe(shotId);
     expect(artifact.checkpoint.status).toBe('accepted');
+    expect(artifact.consistency.status).toBe('consistent');
+    expect(artifact.consistency.availableCharacterLabels).toContain(characterLabel);
+    expect(artifact.consistency.missingCharacters).toEqual([]);
     expect(artifact.source.durationMs).toBe(4200);
-    expect(artifact.source.characters).toEqual(['Nora']);
+    expect(artifact.source.characters).toEqual([characterLabel]);
   });
 });

@@ -236,6 +236,13 @@ y valida evidencia canonica de rigging en disco (`summary/report`, outputs
 warnings y diagnosticos (`command_logs`) publicados por el runner bajo
 `Assets3D/<project>/<asset>/rigging/<run_id>/...`.
 
+La prueba browser-backed `phase23-shot-brief` ejecuta ahora la corrida real de
+`23.2` desde UI (`/workspaces/shot`), valida persistencia canonica en
+`STUDIO_DIR/Scenes/<project>/<scene>/shots/<shot>/briefs/shot-brief.json` y
+exige consistencia `consistent` contra el catalogo real de personajes
+(`character-catalog.json`) para garantizar una toma reutilizable en animacion o
+composicion.
+
 La prueba browser-backed de `15.2` confirma en maquina real que el shell
 arranca, navega y consume el contrato canonico sobre estas superficies:
 

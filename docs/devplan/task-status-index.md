@@ -10,8 +10,8 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 - Total task files: `76`
 - `archived`: `10`
 - `blocked`: `1`
-- `done`: `31`
-- `pending`: `34`
+- `done`: `32`
+- `pending`: `33`
 
 ## Tasks
 
@@ -60,7 +60,7 @@ Actualizacion canonica: `python3 scripts/devplan/build-task-status-index.py --wr
 | `22.1` Integracion UI del rigging automatizado | `22` Rigging automatizado de assets en UI | `done` | [docs/devplan/tasks/22.1-ui-rigging-integration.md](docs/devplan/tasks/22.1-ui-rigging-integration.md) |
 | `22.2` Prueba end-to-end de Phase 22 | `22` Rigging automatizado de assets en UI | `done` | [docs/devplan/tasks/22.2-phase22-e2e-proof.md](docs/devplan/tasks/22.2-phase22-e2e-proof.md) |
 | `23.1` Workspace UI de descripcion de tomas | `23` Descripcion de tomas en UI | `done` | [docs/devplan/tasks/23.1-ui-shot-description-workspace.md](docs/devplan/tasks/23.1-ui-shot-description-workspace.md) |
-| `23.2` Prueba end-to-end de Phase 23 | `23` Descripcion de tomas en UI | `pending` | [docs/devplan/tasks/23.2-phase23-e2e-proof.md](docs/devplan/tasks/23.2-phase23-e2e-proof.md) |
+| `23.2` Prueba end-to-end de Phase 23 | `23` Descripcion de tomas en UI | `done` | [docs/devplan/tasks/23.2-phase23-e2e-proof.md](docs/devplan/tasks/23.2-phase23-e2e-proof.md) |
 | `24.0` Backend de embed y contexto para Kimodo | `24` Animacion de personajes en Kimodo embebido | `pending` | [docs/devplan/tasks/24.0-backend-kimodo-embedded-context-bridge.md](docs/devplan/tasks/24.0-backend-kimodo-embedded-context-bridge.md) |
 | `24.1` Workspace embebido de Kimodo para animacion de tomas | `24` Animacion de personajes en Kimodo embebido | `pending` | [docs/devplan/tasks/24.1-kimodo-embedded-shot-animation-workspace.md](docs/devplan/tasks/24.1-kimodo-embedded-shot-animation-workspace.md) |
 | `24.2` Prueba end-to-end de Phase 24 | `24` Animacion de personajes en Kimodo embebido | `pending` | [docs/devplan/tasks/24.2-phase24-e2e-proof.md](docs/devplan/tasks/24.2-phase24-e2e-proof.md) |
