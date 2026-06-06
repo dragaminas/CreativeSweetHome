@@ -17,9 +17,19 @@ git clone https://github.com/TheTom/llama-cpp-turboquant.git
 cd llama-cpp-turboquant
 git checkout feature/turboquant-kv-cache
 ```
-
 La propia guía de TurboQuant+ indica clonar ese repo y cambiar a esa rama antes de compilar. ([GitHub][1])
 
+### 2.1 Instalar cuda toolkit
+
+Paso único: comprueba primero si realmente falta:
+```bash
+nvcc --version
+```
+Si dice command not found, instala el toolkit:
+```bash
+sudo apt update
+sudo apt install nvidia-cuda-toolkit
+```
 ---
 
 ## 3. Compilar con CUDA para tu RTX 3090
@@ -35,7 +45,7 @@ cmake -S . -B build \
 cmake --build build --config Release -j"$(nproc)"
 ```
 
-La guía oficial del proyecto muestra la compilación NVIDIA con `-DGGML_CUDA=ON`; el ajuste `CMAKE_CUDA_ARCHITECTURES=86` lo añado para tu 3090. ([GitHub][1])
+La guía oficial del proyecto muestra la compilación NVIDIA con `-DGGML_CUDA=ON`; el ajuste `CMAKE_CUDA_ARCHITECTURES=86` lo añado para tla 3090. ([GitHub][1])
 
 ---
 
@@ -88,7 +98,7 @@ No empezaría con `-ctk turbo3 -ctv turbo3` todavía, porque comprimir también 
 ## 6. Probar desde API estilo OpenAI
 
 ```bash
-curl http://localhost:8082/v1/chat/completions \
+curl http://localhost:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "local",
@@ -164,9 +174,21 @@ Para tu objetivo de **256K context**, TurboQuant tiene sentido probarlo; para pr
 
 ## Descargar modelos
 
-```bash 
-python3 -m pip install -U "huggingface_hub[cli]"
+Instalar pip y hugginface
 
+```bash 
+sudo apt update
+sudo apt install -y python3-pip
+python3 -m pip install -U "huggingface_hub[cli]" --break-system-packages
+```
+
+Agregarhf al path
+
+```bash 
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+```bash 
 mkdir -p "$HOME/models/qwen3.6-35b-a3b-q8"
 
 hf download unsloth/Qwen3.6-35B-A3B-GGUF \
@@ -204,7 +226,7 @@ exec "$LLAMA_SERVER" \
   --mlock \
   --cache-type-k turbo4 \
   --cache-type-v turbo3 \
-  --jinja
+  # --jinja esto puede no funcionar, descomentar solo en caso de necesidad y probar
 EOF
 
 chmod +x ~/start-qwen36-llamacpp.sh
@@ -240,7 +262,7 @@ exec "$LLAMA_SERVER" \
   --mlock \
   --cache-type-k turbo4 \
   --cache-type-v turbo3 \
-  --jinja
+  # --jinja esto puede no funcionar, descomentar solo en caso de necesidad y probar
 EOF
 
 chmod +x ~/start-llamacpp-model.sh
