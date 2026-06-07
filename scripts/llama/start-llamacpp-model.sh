@@ -11,18 +11,25 @@ MODEL_PATH="${MODEL_PATH:-$HOME/models/qwen3.6-35b-a3b-q8/Qwen3.6-35B-A3B-Q8_0.g
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8081}"
 CTX_SIZE="${CTX_SIZE:-32768}"
-N_CPU_MOE="${N_CPU_MOE:-15}"
+N_CPU_MOE="${N_CPU_MOE:-20}"
 GPU_LAYERS="${GPU_LAYERS:-auto}"
 # GPU_LAYERS="${GPU_LAYERS:-999}"
 
 PARALLEL="${PARALLEL:-1}"
 # use --kv-unified for parallel > 1
 
-BATCH_SIZE="${BATCH_SIZE:-512}"
-UBATCH_SIZE="${UBATCH_SIZE:-256}"
-
 # Default: use only the physical RTX 3090 from nvidia-smi, currently GPU 1.
 CUDA_DEVICES="${CUDA_DEVICES:-1}"
+
+# Default: use cards from nvidia-smi, currently GPU 2.
+# CUDA_DEVICES="${CUDA_DEVICES:-1,0}"
+# TENSOR_SPLIT="${TENSOR_SPLIT:-2,1}"
+# MAIN_GPU="${MAIN_GPU:-0}"
+# SPLIT_MODE="${SPLIT_MODE:-row}"
+# --split-mode "$SPLIT_MODE" \
+# --tensor-split "$TENSOR_SPLIT" \
+# --main-gpu "$MAIN_GPU" \
+
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
 export CUDA_VISIBLE_DEVICES="$CUDA_DEVICES"
 
@@ -51,8 +58,6 @@ exec "$LLAMA_SERVER" \
   --n-gpu-layers "$GPU_LAYERS" \
   --n-cpu-moe "$N_CPU_MOE" \
   --ctx-size "$CTX_SIZE" \
-  --batch-size "$BATCH_SIZE" \
-  --ubatch-size "$UBATCH_SIZE" \
   --flash-attn on \
   --no-mmap \
   --parallel "$PARALLEL" \
