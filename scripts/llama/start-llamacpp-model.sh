@@ -3,16 +3,46 @@ set -euo pipefail
 
 # Generic llama.cpp TurboQuant endpoint launcher.
 # Override values from the command line:
-# MODEL_PATH=/path/model.gguf PORT=8082 CTX_SIZE=32768 N_CPU_MOE=25 ~/start-llamacpp-model.sh
+# MODEL_PATH=/path/model.gguf PORT=8082 CTX_SIZE=32768 N_CPU_MOE=25 CUDA_DEVICES=1 ~/start-llamacpp-model.sh
 
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Documents/Repos/llama-cpp-turboquant/build/bin/llama-server}"
 
 MODEL_PATH="${MODEL_PATH:-$HOME/models/qwen3.6-35b-a3b-q8/Qwen3.6-35B-A3B-Q8_0.gguf}"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8081}"
-CTX_SIZE="${CTX_SIZE:-131072}" 
-N_CPU_MOE="${N_CPU_MOE:-25}"
-GPU_LAYERS="${GPU_LAYERS:-999}"
+CTX_SIZE="${CTX_SIZE:-32768}"
+N_CPU_MOE="${N_CPU_MOE:-15}"
+GPU_LAYERS="${GPU_LAYERS:-auto}"
+# GPU_LAYERS="${GPU_LAYERS:-999}"
+
+PARALLEL="${PARALLEL:-1}"
+# use --kv-unified for parallel > 1
+
+BATCH_SIZE="${BATCH_SIZE:-512}"
+UBATCH_SIZE="${UBATCH_SIZE:-256}"
+
+# Default: use only the physical RTX 3090 from nvidia-smi, currently GPU 1.
+CUDA_DEVICES="${CUDA_DEVICES:-1}"
+export CUDA_DEVICE_ORDER=PCI_BUS_ID
+export CUDA_VISIBLE_DEVICES="$CUDA_DEVICES"
+
+#Drafter settings, for n-gram modulation.
+# --spec-type ngram-mod \
+# --spec-ngram-mod-n-min 1 \
+# --spec-ngram-mod-n-max 4 \
+# --spec-ngram-mod-n-match 16
+
+#Drafter settings, for n-gram mapping.
+# --spec-type ngram-map-k \
+# --spec-ngram-map-k-size-n 16 \
+# --spec-ngram-map-k-size-m 4 \
+# --spec-ngram-map-k-min-hits 1
+
+#Drafter settings, for n-gram cache.
+SPEC_TYPE="${SPEC_TYPE:-ngram-cache}"
+LOOKUP_CACHE_DYNAMIC="${LOOKUP_CACHE_DYNAMIC:-$HOME/.cache/llama-ngram-cache.bin}"
+# --spec-type "$SPEC_TYPE" \
+# --lookup-cache-dynamic "$LOOKUP_CACHE_DYNAMIC"
 
 exec "$LLAMA_SERVER" \
   --model "$MODEL_PATH" \
@@ -21,8 +51,22 @@ exec "$LLAMA_SERVER" \
   --n-gpu-layers "$GPU_LAYERS" \
   --n-cpu-moe "$N_CPU_MOE" \
   --ctx-size "$CTX_SIZE" \
+  --batch-size "$BATCH_SIZE" \
+  --ubatch-size "$UBATCH_SIZE" \
   --flash-attn on \
   --no-mmap \
+  --parallel "$PARALLEL" \
+  --no-cache-idle-slots \
   --mlock \
   --cache-type-k turbo4 \
   --cache-type-v turbo3 \
+  --spec-type ngram-mod \
+  --spec-ngram-mod-n-min 1 \
+  --spec-ngram-mod-n-max 4 \
+  --spec-ngram-mod-n-match 16
+  
+  
+  
+
+
+  
