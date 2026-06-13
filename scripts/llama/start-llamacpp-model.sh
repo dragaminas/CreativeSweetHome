@@ -10,8 +10,8 @@ LLAMA_SERVER="${LLAMA_SERVER:-$HOME/Documents/Repos/llama-cpp-turboquant/build/b
 MODEL_PATH="${MODEL_PATH:-$HOME/models/qwen3.6-35b-a3b-q8/Qwen3.6-35B-A3B-Q8_0.gguf}"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8081}"
-CTX_SIZE="${CTX_SIZE:-32768}"
-N_CPU_MOE="${N_CPU_MOE:-20}"
+CTX_SIZE="${CTX_SIZE:-131072}"
+N_CPU_MOE="${N_CPU_MOE:-25}"
 GPU_LAYERS="${GPU_LAYERS:-auto}"
 # GPU_LAYERS="${GPU_LAYERS:-999}"
 
