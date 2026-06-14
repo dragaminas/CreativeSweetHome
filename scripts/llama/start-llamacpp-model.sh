@@ -65,11 +65,6 @@ exec "$LLAMA_SERVER" \
   --mlock \
   --cache-type-k turbo4 \
   --cache-type-v turbo3 \
-  --spec-type ngram-mod \
-  --spec-ngram-mod-n-min 1 \
-  --spec-ngram-mod-n-max 4 \
-  --spec-ngram-mod-n-match 16
-  
   
   
 
